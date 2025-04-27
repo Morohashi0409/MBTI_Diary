@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SendHorizontal } from 'lucide-react-native';
 import { Theme } from '@/constants/theme';
+import { apiClient } from '@/services/apiClient';
 import Reanimated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -35,7 +36,7 @@ const DiaryInput: React.FC<DiaryInputProps> = ({ onSubmit, isLoading }) => {
     };
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (text.trim().length === 0 || isLoading) return;
     
     scale.value = withSequence(
@@ -44,6 +45,19 @@ const DiaryInput: React.FC<DiaryInputProps> = ({ onSubmit, isLoading }) => {
     );
     
     Keyboard.dismiss();
+    
+    try {
+      // FastAPI側のanalyze関数を呼び出す
+      const response = await apiClient.analyzeDiary({ content: text.trim() });
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error(errorData.error || 'Failed to analyze diary');
+      }
+    } catch (error) {
+      console.error('Failed to analyze diary:', error);
+    }
+    
     onSubmit(text.trim());
   };
 

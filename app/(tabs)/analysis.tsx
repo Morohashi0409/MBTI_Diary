@@ -13,8 +13,8 @@ import FeedbackDisplay from '@/components/FeedbackDisplay';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import ErrorMessage from '@/components/ErrorMessage';
 import { Theme } from '@/constants/theme';
-import { Share2, ArrowLeft } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { Share2, ArrowLeft, RefreshCcw } from 'lucide-react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -29,8 +29,36 @@ export default function AnalysisResultScreen() {
     isLoading, 
     error, 
     isStreaming, 
-    streamedResult 
+    streamedResult,
+    analyzeDiary 
   } = useDiaryAnalyze();
+  
+  const [lastContent, setLastContent] = useState<string | null>(null);
+  const params = useLocalSearchParams<{ content?: string }>();
+
+  // ページ読み込み時にAPIからデータを取得
+  useEffect(() => {
+    const content = params.content || lastContent;
+    if (content && content !== lastContent) {
+      setLastContent(content);
+      analyzeDiary(content);
+    } else if (!result && !isLoading && !error && !isStreaming && !streamedResult) {
+      // 初回表示時、パラメータがない場合はローカルストレージから最後の日記を取得して分析
+      const fetchLastDiaryContent = async () => {
+        try {
+          // 本来はローカルストレージからデータを取得する処理
+          // 今回はサンプルテキストを使用
+          const sampleContent = "今日は友人と会って楽しい時間を過ごした。人と話すとエネルギーがもらえる気がする。";
+          setLastContent(sampleContent);
+          analyzeDiary(sampleContent);
+        } catch (err) {
+          console.error('最後の日記の取得に失敗しました', err);
+        }
+      };
+      
+      fetchLastDiaryContent();
+    }
+  }, [params.content, analyzeDiary, result, isLoading, error, isStreaming, streamedResult, lastContent]);
   
   const handleShare = async () => {
     if (!result) return;
@@ -62,6 +90,12 @@ export default function AnalysisResultScreen() {
   
   const isEmpty = !result && !isLoading && !error && !isStreaming && !streamedResult;
 
+  const handleRefreshAnalysis = () => {
+    if (lastContent) {
+      analyzeDiary(lastContent);
+    }
+  };
+
   return (
     <ScrollView 
       style={styles.container}
@@ -71,13 +105,22 @@ export default function AnalysisResultScreen() {
         <View style={styles.titleRow}>
           <Text style={styles.title}>あなたのMBTI分析</Text>
           {(result || streamedResult) && (
-            <TouchableOpacity 
-              style={styles.shareButton}
-              onPress={handleShare}
-            >
-              <Share2 size={18} color={Theme.colors.primary} />
-              <Text style={styles.shareText}>共有</Text>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity 
+                style={[styles.iconButton, styles.refreshButton]}
+                onPress={handleRefreshAnalysis}
+                disabled={isLoading || isStreaming}
+              >
+                <RefreshCcw size={18} color={Theme.colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.shareButton}
+                onPress={handleShare}
+              >
+                <Share2 size={18} color={Theme.colors.primary} />
+                <Text style={styles.shareText}>共有</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
         {(result || streamedResult) && (
@@ -89,6 +132,16 @@ export default function AnalysisResultScreen() {
           </Text>
         )}
       </View>
+      
+      {/* APIからの返却値をページトップに表示 */}
+      {(result || streamedResult) && !isLoading && !isStreaming && (
+        <View style={styles.summaryContainer}>
+          <Text style={styles.summaryTitle}>分析サマリー</Text>
+          <Text style={styles.summaryText}>
+            {result?.summary || streamedResult?.summary || '分析結果がまだありません。'}
+          </Text>
+        </View>
+      )}
       
       {isEmpty && (
         <View style={styles.emptyContainer}>
@@ -171,6 +224,21 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     color: Theme.colors.text,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  refreshButton: {
+    backgroundColor: Theme.colors.primary + '20',
+    marginRight: Theme.spacing.xs,
+  },
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -193,6 +261,25 @@ const styles = StyleSheet.create({
   mbtiType: {
     fontFamily: 'Inter-Bold',
     color: Theme.colors.primary,
+  },
+  summaryContainer: {
+    backgroundColor: Theme.colors.cardBackground,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    marginBottom: Theme.spacing.lg,
+    ...Theme.shadows.sm,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: Theme.colors.text,
+    marginBottom: Theme.spacing.xs,
+  },
+  summaryText: {
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    color: Theme.colors.text,
+    lineHeight: 22,
   },
   sectionTitle: {
     fontSize: 18,

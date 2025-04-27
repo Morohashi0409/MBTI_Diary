@@ -52,8 +52,7 @@ export const useDiaryAnalyze = () => {
     setIsStreaming(false);
     
     try {
-      // For demonstration, we'll simulate streaming by using regular API call
-      // In a real app, you would use EventSource or WebSockets for streaming
+      // 実際のAPIを呼び出す
       const response = await apiClient.analyzeDiary({ content });
       
       if (!response.ok) {
@@ -61,29 +60,16 @@ export const useDiaryAnalyze = () => {
         throw new Error(errorData.error || 'Failed to analyze diary');
       }
       
-      // Simulate streaming by setting the state directly
-      // In a real app with streaming, you'd receive chunks of data
-      setIsStreaming(true);
+      // APIレスポンスのJSONを取得
+      const apiResponse: ApiResponse = await response.json();
       
-      // In a real app, we'd parse the streaming response
-      // For now, we'll just simulate with a timeout
-      
-      // Mock response for demo purposes
-      const mockResponse: ApiResponse = {
-        dimensions: {
-          EI: Math.random() * 100, // 0-100 where 0 is fully E, 100 is fully I
-          SN: Math.random() * 100,
-          TF: Math.random() * 100,
-          JP: Math.random() * 100,
-        },
-        feedback: "Based on your diary entry, you seem to exhibit traits associated with introversion, as you mention enjoying quiet reflection. Your writing shows a balance between sensing (focusing on concrete details) and intuition (exploring possibilities). There's a stronger tendency toward feeling-based decision making over thinking-based approaches. You also appear to have a slight preference for perceiving over judging, as you mention flexibility in your daily routine.",
-        summary: "Your writing suggests an INFP profile - someone who is introspective, values authenticity, and tends to see possibilities in situations.",
-      };
-      
-      const result = mapApiResponseToAnalysisResult(mockResponse);
+      // 結果を変換して保存
+      const result = mapApiResponseToAnalysisResult(apiResponse);
       setResult(result);
 
-      // Mock streaming with timeouts
+      // ストリーミング表示をシミュレート
+      setIsStreaming(true);
+      
       setTimeout(() => {
         setStreamedResult(prev => ({ 
           ...prev, 

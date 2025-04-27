@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Theme } from '@/constants/theme';
-import LineChart from '@/components/LineChart';
-import { MBTIScoreCard } from '@/components/MBTIScoreCard';
+import { LineChart } from '@/components/LineChart';
+import MBTIScoreCard from '@/components/MBTIScoreCard';
+import { getUserProfile, UserProfile } from '@/services/userStorage';
 
 // Mock data for MBTI scores over time
 const mockTimelineData = {
@@ -60,8 +61,44 @@ const currentDimensions = [
 ];
 
 export default function ProfileScreen() {
+  // ユーザープロフィール情報の状態
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // コンポーネントがマウントされたときにユーザープロフィールを取得
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const profile = await getUserProfile();
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('プロフィール取得エラー:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
   return (
     <ScrollView style={styles.container}>
+      {/* ユーザープロフィール情報表示 */}
+      {userProfile && (
+        <View style={styles.profileCard}>
+          <Text style={styles.welcomeText}>
+            ようこそ <Text style={styles.username}>{userProfile.username}</Text> さん
+          </Text>
+          <Text style={styles.mbtiText}>
+            あなたの自己申告MBTIタイプ：
+            <Text style={styles.mbtiType}>{userProfile.mbti}</Text>
+          </Text>
+          <Text style={styles.userIdText}>
+            ユーザーID：{userProfile.userId}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.header}>
         <Text style={styles.title}>あなたの現在のMBTI傾向</Text>
         <Text style={styles.subtitle}>
@@ -106,6 +143,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Theme.colors.background,
+  },
+  profileCard: {
+    backgroundColor: Theme.colors.primary + '10',
+    padding: Theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.primary + '30',
+  },
+  welcomeText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: Theme.colors.text,
+    marginBottom: Theme.spacing.xs,
+  },
+  username: {
+    fontFamily: 'Inter-Bold',
+    color: Theme.colors.primary,
+  },
+  mbtiText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: Theme.colors.textSecondary,
+    marginBottom: Theme.spacing.xs,
+  },
+  mbtiType: {
+    fontFamily: 'Inter-Bold',
+    color: Theme.colors.primary,
+  },
+  userIdText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: Theme.colors.textTertiary,
   },
   header: {
     padding: Theme.spacing.lg,
