@@ -12,6 +12,7 @@ import {
 import { SendHorizontal } from 'lucide-react-native';
 import { Theme } from '@/constants/theme';
 import { apiClient } from '@/services/apiClient';
+import { getUserProfile } from '@/services/userStorage';
 import Reanimated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -46,18 +47,8 @@ const DiaryInput: React.FC<DiaryInputProps> = ({ onSubmit, isLoading }) => {
     
     Keyboard.dismiss();
     
-    try {
-      // FastAPI側のanalyze関数を呼び出す
-      const response = await apiClient.analyzeDiary({ content: text.trim() });
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API Error:', errorData);
-        throw new Error(errorData.error || 'Failed to analyze diary');
-      }
-    } catch (error) {
-      console.error('Failed to analyze diary:', error);
-    }
-    
+    // 親コンポーネント側のフックで処理されるため、ここでは直接APIは呼び出さず
+    // onSubmitで親に通知するだけにします
     onSubmit(text.trim());
   };
 

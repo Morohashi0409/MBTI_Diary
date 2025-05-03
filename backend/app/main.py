@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.diary import router as diary_router
 from app.api.users import router as users_router
+# データベースモジュールをインポート - アプリの起動時に初期化される
+from app.database import db
 
 app = FastAPI(title="MBTI Diary API")
 

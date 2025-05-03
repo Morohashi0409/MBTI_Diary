@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { apiClient } from '@/services/apiClient';
-import { AnalysisResult, ApiResponse, MBTIDimension } from '@/types';
+import { apiClient, DiaryAnalysisResponse } from '@/services/apiClient';
+import { AnalysisResult, MBTIDimension } from '@/types';
+import { getUserProfile } from '@/services/userStorage';
 
 export const useDiaryAnalyze = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -9,7 +10,7 @@ export const useDiaryAnalyze = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamedResult, setStreamedResult] = useState<Partial<AnalysisResult> | null>(null);
 
-  const mapApiResponseToAnalysisResult = (apiResponse: ApiResponse): AnalysisResult => {
+  const mapApiResponseToAnalysisResult = (apiResponse: DiaryAnalysisResponse): AnalysisResult => {
     const dimensions: MBTIDimension[] = [
       {
         name: 'Extraversion vs. Introversion',
@@ -41,7 +42,7 @@ export const useDiaryAnalyze = () => {
       dimensions,
       feedback: apiResponse.feedback,
       summary: apiResponse.summary,
-      timestamp: new Date(),
+      timestamp: new Date(apiResponse.created_at),
     };
   };
 
@@ -52,16 +53,17 @@ export const useDiaryAnalyze = () => {
     setIsStreaming(false);
     
     try {
-      // 実際のAPIを呼び出す
-      const response = await apiClient.analyzeDiary({ content });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze diary');
+      // ユーザープロファイルを取得してユーザーIDを抽出
+      const userProfile = await getUserProfile();
+      if (!userProfile || !userProfile.userId) {
+        throw new Error('ユーザープロフィールが見つかりません。再ログインしてください。');
       }
       
-      // APIレスポンスのJSONを取得
-      const apiResponse: ApiResponse = await response.json();
+      // 新しいAPIを呼び出す（ユーザーIDを含める）
+      const apiResponse = await apiClient.analyzeAndSaveDiary({ 
+        content,
+        userId: userProfile.userId
+      });
       
       // 結果を変換して保存
       const result = mapApiResponseToAnalysisResult(apiResponse);
@@ -101,7 +103,7 @@ export const useDiaryAnalyze = () => {
       
       return result;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
       setError(errorMessage);
       setIsLoading(false);
       setIsStreaming(false);

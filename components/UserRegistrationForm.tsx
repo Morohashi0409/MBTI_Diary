@@ -46,7 +46,7 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({ onRegistrat
 
     try {
       // APIリクエスト
-      const response = await apiClient.registerUser({
+      const response = await apiClient.createUserAccount({
         username: username.trim(),
         mbti: selectedMBTI
       });
