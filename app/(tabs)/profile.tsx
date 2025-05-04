@@ -35,28 +35,28 @@ const mockTimelineData = {
 // Current MBTI dimensions
 const currentDimensions = [
   {
-    name: '外向-内向',
+    name: '興味関心の方向',
     score: 65,
-    label1: '外向的 (E)',
-    label2: '内向的 (I)',
+    label1: '外向型 (E)',
+    label2: '内向型 (I)',
   },
   {
-    name: '感覚-直感',
+    name: 'ものの見方',
     score: 58,
-    label1: '感覚的 (S)',
-    label2: '直感的 (N)',
+    label1: '感覚型 (S)',
+    label2: '直感型 (N)',
   },
   {
-    name: '思考-感情',
+    name: '判断の仕方',
     score: 65,
-    label1: '論理的 (T)',
-    label2: '感情的 (F)',
+    label1: '思考型 (T)',
+    label2: '感情型 (F)',
   },
   {
-    name: '判断-知覚',
+    name: '外界への接し方',
     score: 45,
-    label1: '計画的 (J)',
-    label2: '柔軟的 (P)',
+    label1: '判断型 (J)',
+    label2: '知覚型 (P)',
   },
 ];
 
