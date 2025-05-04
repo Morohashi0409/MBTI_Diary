@@ -39,6 +39,7 @@ export const useDiaryAnalyze = () => {
     ];
 
     return {
+      id: apiResponse.id, // APIレスポンスからIDを含める
       dimensions,
       feedback: apiResponse.feedback,
       summary: apiResponse.summary,
@@ -74,7 +75,8 @@ export const useDiaryAnalyze = () => {
       
       setTimeout(() => {
         setStreamedResult(prev => ({ 
-          ...prev, 
+          ...prev,
+          id: result.id, // IDも含める 
           dimensions: result.dimensions.slice(0, 1),
           timestamp: new Date() 
         }));

@@ -31,8 +31,9 @@ export default function DiaryWriteScreen() {
   
   const handleSubmitDiary = async (content: string) => {
     const analysisResult = await analyzeDiary(content);
-    if (analysisResult) {
-      router.push('/analysis');
+    if (analysisResult && analysisResult.id) {
+      // 分析詳細画面に分析IDを渡して遷移
+      router.push(`/analysis/${analysisResult.id}`);
     }
   };
   

@@ -11,6 +11,7 @@ export type MBTIDimension = {
 };
 
 export type AnalysisResult = {
+  id: string;
   dimensions: MBTIDimension[];
   feedback: string;
   summary: string;

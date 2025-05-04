@@ -152,46 +152,109 @@ async def get_user_diaries(user_id: str = Path(...), limit: int = Query(10)):
         if not user_doc.exists:
             raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
         
-        # 日記データを取得（作成日時の降順）
-        diary_docs = db.collection('diaries')\
-            .where('user_id', '==', user_id)\
-            .order_by('created_at', direction='DESCENDING')\
-            .limit(limit)\
-            .stream()
+        logger.info(f"ユーザー {user_id} の日記を取得します（上限: {limit}件）")
         
-        diaries = []
-        for doc in diary_docs:
-            try:
-                diary_data = doc.to_dict()
-                # Firestoreのタイムスタンプをdatetimeに変換
-                created_at = None
-                if 'created_at' in diary_data:
-                    if isinstance(diary_data['created_at'], datetime):
-                        created_at = diary_data['created_at']
-                    else:
-                        # Firestoreのタイムスタンプオブジェクトの場合
-                        try:
-                            created_at = diary_data['created_at'].datetime()
-                        except AttributeError:
-                            # SERVER_TIMESTAMPが処理されていない場合
-                            created_at = datetime.now()
-                else:
-                    created_at = datetime.now()
+        try:
+            # 日記データを取得（作成日時の降順）
+            diary_docs = db.collection('diaries')\
+                .where('user_id', '==', user_id)\
+                .order_by('created_at', direction='DESCENDING')\
+                .limit(limit)\
+                .stream()
+            
+            diaries = []
+            for doc in diary_docs:
+                try:
+                    diary_data = doc.to_dict()
+                    logger.debug(f"日記データ取得: ID={doc.id}, キー={list(diary_data.keys())}")
                     
-                diaries.append(DiaryResponse(
-                    id=diary_data['id'],
-                    content=diary_data['content'],
-                    dimensions=diary_data['dimensions'],
-                    feedback=diary_data['feedback'],
-                    summary=diary_data['summary'],
-                    created_at=created_at
-                ))
-            except Exception as item_error:
-                logger.warning(f"日記アイテム処理中にエラー: {str(item_error)}, データ: {diary_data}")
-                # 不正なアイテムはスキップして次へ
-                continue
+                    # 必須フィールドの存在確認
+                    required_fields = ['id', 'content', 'dimensions', 'feedback', 'summary']
+                    missing_fields = [field for field in required_fields if field not in diary_data]
+                    
+                    if missing_fields:
+                        logger.warning(f"日記データに不足フィールドがあります: {missing_fields}, ID={doc.id}")
+                        # 不足フィールドを持つレコードは無視して次に進む
+                        continue
+                    
+                    # Firestoreのタイムスタンプをdatetimeに変換
+                    created_at = datetime.now()  # デフォルト値を設定
+                    
+                    if 'created_at' in diary_data:
+                        timestamp_value = diary_data['created_at']
+                        logger.debug(f"created_at の型: {type(timestamp_value)}")
+                        
+                        if isinstance(timestamp_value, datetime):
+                            created_at = timestamp_value
+                        elif hasattr(timestamp_value, 'timestamp'):
+                            # Firestoreタイムスタンプ
+                            try:
+                                # タイムスタンプはすでに数値（秒）なので、そのままdatetimeに変換
+                                timestamp_seconds = timestamp_value.timestamp()
+                                created_at = datetime.fromtimestamp(timestamp_seconds)
+                            except Exception as ts_error:
+                                logger.warning(f"タイムスタンプ変換エラー: {str(ts_error)}")
+                        elif isinstance(timestamp_value, (int, float)):
+                            # UNIX タイムスタンプの場合
+                            try:
+                                created_at = datetime.fromtimestamp(timestamp_value)
+                            except Exception as ts_error:
+                                logger.warning(f"UNIXタイムスタンプ変換エラー: {str(ts_error)}")
+                    
+                    # 次元データの検証
+                    dimensions = diary_data.get('dimensions', {})
+                    if not isinstance(dimensions, dict):
+                        logger.warning(f"dimensions が辞書型ではありません: {type(dimensions)}")
+                        dimensions = {}
+                    
+                    # 欠損している次元を補完
+                    dimension_keys = ['EI', 'SN', 'TF', 'JP']
+                    for key in dimension_keys:
+                        if key not in dimensions:
+                            logger.warning(f"次元 {key} が欠損しています。デフォルト値 50 を設定します。")
+                            dimensions[key] = 50.0
+                    
+                    # DiaryResponseオブジェクトの作成
+                    diary_response = DiaryResponse(
+                        id=diary_data.get('id', doc.id),  # IDがない場合はドキュメントIDを使用
+                        content=diary_data.get('content', ''),
+                        dimensions=dimensions,
+                        feedback=diary_data.get('feedback', ''),
+                        summary=diary_data.get('summary', ''),
+                        created_at=created_at
+                    )
+                    
+                    diaries.append(diary_response)
+                    logger.debug(f"日記エントリーを追加しました: ID={diary_response.id}")
+                    
+                except Exception as item_error:
+                    logger.warning(f"日記アイテム処理中にエラー: {str(item_error)}")
+                    logger.warning(f"問題のあるデータ: {diary_data if 'diary_data' in locals() else 'データなし'}")
+                    # 不正なアイテムはスキップして次へ
+                    continue
+            
+            logger.info(f"取得完了: {len(diaries)}件の日記を取得しました")
+            return diaries
+                
+        except Exception as query_error:
+            error_msg = str(query_error)
+            logger.error(f"クエリ実行エラー: {error_msg}")
+            
+            # Firestoreのインデックスエラーを検出
+            if "The query requires an index" in error_msg and "https://console.firebase.google.com" in error_msg:
+                # インデックスのURLを抽出
+                import re
+                index_url_match = re.search(r'(https://console\.firebase\.google\.com[^\s]+)', error_msg)
+                index_url = index_url_match.group(1) if index_url_match else "Firebaseコンソールでインデックスを作成してください"
+                
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Firestoreのインデックスが必要です。次のURLからインデックスを作成してください: {index_url}"
+                )
+            
+            # インデックスエラー以外の場合は再スロー
+            raise
         
-        return diaries
     except HTTPException:
         raise
     except Exception as e:

@@ -56,7 +56,7 @@ export default function GrowthScreen() {
         ))}
       </View>
 
-      {targetTypeAdvice && (
+      {/* {targetTypeAdvice && (
         <View style={styles.targetSection}>
           <Text style={styles.sectionTitle}>
             なりたいタイプ（{targetTypeAdvice.targetType}）に向けて
@@ -69,7 +69,7 @@ export default function GrowthScreen() {
             ))}
           </View>
         </View>
-      )}
+      )} */}
     </ScrollView>
   );
 }

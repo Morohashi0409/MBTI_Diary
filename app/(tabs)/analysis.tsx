@@ -3,201 +3,207 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  ScrollView, 
+  FlatList, 
   TouchableOpacity,
-  Share
+  ActivityIndicator,
+  RefreshControl
 } from 'react-native';
-import { useDiaryAnalyze } from '@/hooks/useDiaryAnalyze';
-import MBTIScoreCard from '@/components/MBTIScoreCard';
-import FeedbackDisplay from '@/components/FeedbackDisplay';
-import LoadingIndicator from '@/components/LoadingIndicator';
-import ErrorMessage from '@/components/ErrorMessage';
+import { router } from 'expo-router';
+import { apiClient, DiaryAnalysisResponse } from '@/services/apiClient';
+import { getUserProfile } from '@/services/userStorage';
 import { Theme } from '@/constants/theme';
-import { Share2, ArrowLeft, RefreshCcw } from 'lucide-react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withTiming, 
-  FadeIn,
-  FadeOut
-} from 'react-native-reanimated';
+import { ArrowRight, RefreshCcw, BookOpen } from 'lucide-react-native';
+import ErrorMessage from '@/components/ErrorMessage';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
-export default function AnalysisResultScreen() {
-  const { 
-    result, 
-    isLoading, 
-    error, 
-    isStreaming, 
-    streamedResult,
-    analyzeDiary 
-  } = useDiaryAnalyze();
-  
-  const [lastContent, setLastContent] = useState<string | null>(null);
-  const params = useLocalSearchParams<{ content?: string }>();
+interface DiaryItemProps {
+  diary: DiaryAnalysisResponse;
+  onPress: (id: string) => void;
+}
 
-  // ページ読み込み時にAPIからデータを取得
-  useEffect(() => {
-    const content = params.content || lastContent;
-    if (content && content !== lastContent) {
-      setLastContent(content);
-      analyzeDiary(content);
-    } else if (!result && !isLoading && !error && !isStreaming && !streamedResult) {
-      // 初回表示時、パラメータがない場合はローカルストレージから最後の日記を取得して分析
-      const fetchLastDiaryContent = async () => {
-        try {
-          // 本来はローカルストレージからデータを取得する処理
-          // 今回はサンプルテキストを使用
-          const sampleContent = "今日は友人と会って楽しい時間を過ごした。人と話すとエネルギーがもらえる気がする。";
-          setLastContent(sampleContent);
-          analyzeDiary(sampleContent);
-        } catch (err) {
-          console.error('最後の日記の取得に失敗しました', err);
-        }
-      };
-      
-      fetchLastDiaryContent();
-    }
-  }, [params.content, analyzeDiary, result, isLoading, error, isStreaming, streamedResult, lastContent]);
-  
-  const handleShare = async () => {
-    if (!result) return;
-    
-    try {
-      const mbtiType = getMBTIType(result.dimensions);
-      
-      await Share.share({
-        message: `私のMBTI分析結果: ${mbtiType}\n\n${result.summary}\n\nMBTI日記アプリで分析`,
-        title: '私のMBTI分析結果',
-      });
-    } catch (error) {
-      console.error('共有エラー:', error);
-    }
-  };
-  
-  const getMBTIType = (dimensions: any[]) => {
-    if (!dimensions || dimensions.length < 4) return '不明';
+// 日記リストの各アイテムを表示するコンポーネント
+const DiaryItem: React.FC<DiaryItemProps> = ({ diary, onPress }) => {
+  // MBTIタイプを計算
+  const getMBTIType = (dimensions: DiaryAnalysisResponse['dimensions']) => {
+    if (!dimensions) return '不明';
     
     const type = [
-      dimensions[0].score < 50 ? 'E' : 'I',
-      dimensions[1].score < 50 ? 'S' : 'N',
-      dimensions[2].score < 50 ? 'T' : 'F',
-      dimensions[3].score < 50 ? 'J' : 'P',
+      dimensions.EI < 50 ? 'E' : 'I',
+      dimensions.SN < 50 ? 'S' : 'N',
+      dimensions.TF < 50 ? 'T' : 'F',
+      dimensions.JP < 50 ? 'J' : 'P',
     ].join('');
     
     return type;
   };
   
-  const isEmpty = !result && !isLoading && !error && !isStreaming && !streamedResult;
-
-  const handleRefreshAnalysis = () => {
-    if (lastContent) {
-      analyzeDiary(lastContent);
-    }
+  // 日付をフォーマット
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
-
+  
+  // 本文を省略して表示（最初の50文字）
+  const truncateContent = (content: string, maxLength: number = 50) => {
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+  };
+  
+  const mbtiType = getMBTIType(diary.dimensions);
+  
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+    <TouchableOpacity 
+      style={styles.diaryItem}
+      onPress={() => onPress(diary.id)}
+      activeOpacity={0.7}
     >
-      <View style={styles.headerContainer}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>あなたのMBTI分析</Text>
-          {(result || streamedResult) && (
-            <View style={styles.headerActions}>
-              <TouchableOpacity 
-                style={[styles.iconButton, styles.refreshButton]}
-                onPress={handleRefreshAnalysis}
-                disabled={isLoading || isStreaming}
-              >
-                <RefreshCcw size={18} color={Theme.colors.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.shareButton}
-                onPress={handleShare}
-              >
-                <Share2 size={18} color={Theme.colors.primary} />
-                <Text style={styles.shareText}>共有</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+      <View style={styles.diaryHeader}>
+        <Text style={styles.diaryDate}>{formatDate(diary.created_at)}</Text>
+        <View style={styles.mbtiTypeContainer}>
+          <Text style={styles.mbtiType}>{mbtiType}</Text>
         </View>
-        {(result || streamedResult) && (
-          <Text style={styles.resultSummary}>
-            あなたのパーソナリティタイプ: 
-            <Text style={styles.mbtiType}>
-              {" "}{getMBTIType(result?.dimensions || streamedResult?.dimensions || [])}
-            </Text>
-          </Text>
-        )}
       </View>
       
-      {/* APIからの返却値をページトップに表示 */}
-      {(result || streamedResult) && !isLoading && !isStreaming && (
-        <View style={styles.summaryContainer}>
-          <Text style={styles.summaryTitle}>分析サマリー</Text>
-          <Text style={styles.summaryText}>
-            {result?.summary || streamedResult?.summary || '分析結果がまだありません。'}
-          </Text>
-        </View>
-      )}
+      <Text style={styles.diaryContent}>
+        {truncateContent(diary.content)}
+      </Text>
       
-      {isEmpty && (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>分析結果がありません</Text>
-          <Text style={styles.emptyText}>
-            日記を書いてMBTIパーソナリティ分析を見てみましょう
-          </Text>
-          <TouchableOpacity 
-            style={styles.writeDiaryButton}
-            onPress={() => router.push('/')}
-          >
-            <ArrowLeft size={16} color={Theme.colors.white} />
-            <Text style={styles.writeDiaryButtonText}>
-              日記を書く
-            </Text>
-          </TouchableOpacity>
+      <View style={styles.diaryFooter}>
+        <View style={styles.dimensionsContainer}>
+          <View style={styles.dimensionItem}>
+            <Text style={styles.dimensionLabel}>E-I</Text>
+            <Text style={styles.dimensionValue}>{diary.dimensions.EI.toFixed(1)}</Text>
+          </View>
+          <View style={styles.dimensionItem}>
+            <Text style={styles.dimensionLabel}>S-N</Text>
+            <Text style={styles.dimensionValue}>{diary.dimensions.SN.toFixed(1)}</Text>
+          </View>
+          <View style={styles.dimensionItem}>
+            <Text style={styles.dimensionLabel}>T-F</Text>
+            <Text style={styles.dimensionValue}>{diary.dimensions.TF.toFixed(1)}</Text>
+          </View>
+          <View style={styles.dimensionItem}>
+            <Text style={styles.dimensionLabel}>J-P</Text>
+            <Text style={styles.dimensionValue}>{diary.dimensions.JP.toFixed(1)}</Text>
+          </View>
         </View>
-      )}
+        
+        <ArrowRight size={16} color={Theme.colors.textSecondary} />
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+export default function AnalysisScreen() {
+  const [diaries, setDiaries] = useState<DiaryAnalysisResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // 分析履歴を取得する関数
+  const fetchDiaryAnalyses = async () => {
+    try {
+      setError(null);
       
-      {(isLoading || isStreaming) && (
-        <LoadingIndicator text={
-          isStreaming ? "分析を処理中..." : "日記を分析中..."
-        } />
+      const userProfile = await getUserProfile();
+      if (!userProfile || !userProfile.userId) {
+        throw new Error('ユーザープロフィールが見つかりません。再ログインしてください。');
+      }
+      
+      const response = await apiClient.getUserDiaries(userProfile.userId);
+      setDiaries(response);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+  
+  // 初回読み込み時にデータを取得
+  useEffect(() => {
+    fetchDiaryAnalyses();
+  }, []);
+  
+  // プルダウンで更新
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchDiaryAnalyses();
+  };
+  
+  // 詳細画面への遷移
+  const handleDiaryPress = (id: string) => {
+    router.push(`/analysis/${id}`);
+  };
+  
+  // 新規日記作成画面へ遷移
+  const handleWriteDiary = () => {
+    router.push('/');
+  };
+  
+  // リスト空の場合の表示
+  const renderEmptyList = () => {
+    if (isLoading) return null;
+    
+    return (
+      <View style={styles.emptyContainer}>
+        <BookOpen size={48} color={Theme.colors.textSecondary} />
+        <Text style={styles.emptyTitle}>分析履歴がありません</Text>
+        <Text style={styles.emptyText}>
+          日記を書いてMBTIパーソナリティ分析を始めましょう
+        </Text>
+        <TouchableOpacity 
+          style={styles.writeDiaryButton}
+          onPress={handleWriteDiary}
+        >
+          <Text style={styles.writeDiaryButtonText}>
+            日記を書く
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+  
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerContainer}>
+        <Text style={styles.title}>分析履歴</Text>
+      </View>
+      
+      {isLoading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Theme.colors.primary} />
+          <Text style={styles.loadingText}>分析履歴を読み込み中...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={diaries}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <Animated.View entering={FadeIn.duration(300)}>
+              <DiaryItem diary={item} onPress={handleDiaryPress} />
+            </Animated.View>
+          )}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmptyList}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[Theme.colors.primary]}
+              tintColor={Theme.colors.primary}
+            />
+          }
+        />
       )}
       
       {error && <ErrorMessage message={error} />}
-      
-      {(streamedResult || result) && (
-        <Animated.View 
-          style={styles.resultsContainer}
-          entering={FadeIn.duration(300)}
-          exiting={FadeOut.duration(300)}
-        >
-          <Text style={styles.sectionTitle}>MBTI次元</Text>
-          
-          {(streamedResult?.dimensions || result?.dimensions || []).map((dimension, index) => (
-            <MBTIScoreCard 
-              key={dimension.name} 
-              dimension={dimension} 
-              delay={index * 200}
-            />
-          ))}
-          
-          {(streamedResult?.feedback || result?.feedback) && (
-            <>
-              <Text style={styles.sectionTitle}>パーソナリティの洞察</Text>
-              <FeedbackDisplay 
-                feedback={streamedResult?.feedback || result?.feedback || ''}
-                summary={streamedResult?.summary || result?.summary || ''}
-                delay={800}
-              />
-            </>
-          )}
-        </Animated.View>
-      )}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -206,92 +212,95 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Theme.colors.background,
   },
-  contentContainer: {
+  headerContainer: {
     padding: Theme.spacing.md,
     paddingTop: Theme.spacing.lg,
-  },
-  headerContainer: {
-    marginBottom: Theme.spacing.lg,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Theme.spacing.xs,
+    paddingBottom: Theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.border,
   },
   title: {
     fontSize: 22,
     fontFamily: 'Inter-Bold',
     color: Theme.colors.text,
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconButton: {
-    alignItems: 'center',
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-  },
-  refreshButton: {
-    backgroundColor: Theme.colors.primary + '20',
-    marginRight: Theme.spacing.xs,
-  },
-  shareButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Theme.colors.primary + '20',
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.xs,
-    borderRadius: Theme.borderRadius.round,
   },
-  shareText: {
-    marginLeft: 4,
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: Theme.colors.primary,
-  },
-  resultSummary: {
+  loadingText: {
+    marginTop: Theme.spacing.md,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter-Medium',
     color: Theme.colors.textSecondary,
   },
+  listContent: {
+    padding: Theme.spacing.md,
+    paddingBottom: Theme.spacing.xxl,
+  },
+  diaryItem: {
+    backgroundColor: Theme.colors.cardBackground,
+    borderRadius: Theme.borderRadius.lg,
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.md,
+    ...Theme.shadows.sm,
+  },
+  diaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.xs,
+  },
+  diaryDate: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: Theme.colors.textSecondary,
+  },
+  mbtiTypeContainer: {
+    backgroundColor: Theme.colors.primary + '20',
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs / 2,
+    borderRadius: Theme.borderRadius.round,
+  },
   mbtiType: {
+    fontSize: 14,
     fontFamily: 'Inter-Bold',
     color: Theme.colors.primary,
   },
-  summaryContainer: {
-    backgroundColor: Theme.colors.cardBackground,
-    padding: Theme.spacing.md,
-    borderRadius: Theme.borderRadius.lg,
-    marginBottom: Theme.spacing.lg,
-    ...Theme.shadows.sm,
-  },
-  summaryTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: Theme.colors.text,
-    marginBottom: Theme.spacing.xs,
-  },
-  summaryText: {
+  diaryContent: {
     fontSize: 15,
     fontFamily: 'Inter-Regular',
     color: Theme.colors.text,
+    marginBottom: Theme.spacing.md,
     lineHeight: 22,
   },
-  sectionTitle: {
-    fontSize: 18,
+  diaryFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dimensionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dimensionItem: {
+    marginRight: Theme.spacing.md,
+    alignItems: 'center',
+  },
+  dimensionLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: Theme.colors.textSecondary,
+    marginBottom: 2,
+  },
+  dimensionValue: {
+    fontSize: 14,
     fontFamily: 'Inter-Bold',
     color: Theme.colors.text,
-    marginTop: Theme.spacing.md,
-    marginBottom: Theme.spacing.sm,
-  },
-  resultsContainer: {
-    marginTop: Theme.spacing.sm,
   },
   emptyContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Theme.spacing.xl,
@@ -301,6 +310,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'Inter-Bold',
     color: Theme.colors.text,
+    marginTop: Theme.spacing.md,
     marginBottom: Theme.spacing.md,
   },
   emptyText: {
@@ -312,8 +322,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   writeDiaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: Theme.colors.primary,
     paddingHorizontal: Theme.spacing.lg,
     paddingVertical: Theme.spacing.md,
@@ -321,7 +329,6 @@ const styles = StyleSheet.create({
     ...Theme.shadows.md,
   },
   writeDiaryButtonText: {
-    marginLeft: Theme.spacing.xs,
     fontSize: 16,
     fontFamily: 'Inter-Medium',
     color: Theme.colors.white,
