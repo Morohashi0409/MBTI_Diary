@@ -79,6 +79,12 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen name="+not-found" />
+        <Stack.Screen 
+          name="analysis/[id]" 
+          options={{ 
+            headerTitle: "分析詳細",
+          }} 
+        />
       </Stack>
       <StatusBar style="auto" />
       

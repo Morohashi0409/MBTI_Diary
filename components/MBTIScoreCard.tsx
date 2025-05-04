@@ -22,6 +22,18 @@ const MBTIScoreCard: React.FC<MBTIScoreCardProps> = ({
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(20);
   
+  // 左側が高いか右側が高いかを判断
+  const isRightSideHigher = dimension.score < 50;
+  
+  // 表示するスコア値を取得
+  const leftScore = dimension.score.toFixed(1);
+  const rightScore = (100 - dimension.score).toFixed(1);
+  
+  // プログレスバーの値と方向を決定
+  const progressValue = isRightSideHigher 
+    ? (100 - dimension.score) / 100  // 右側が高い場合は反転値
+    : dimension.score / 100;         // 左側が高い場合はそのまま
+  
   useEffect(() => {
     // Animation for progress bar
     setTimeout(() => {
@@ -35,16 +47,19 @@ const MBTIScoreCard: React.FC<MBTIScoreCardProps> = ({
         easing: Easing.out(Easing.cubic) 
       });
       
-      progress.value = withTiming(dimension.score / 100, { 
+      progress.value = withTiming(progressValue, { 
         duration: 1000, 
         easing: Easing.out(Easing.cubic) 
       });
     }, delay);
-  }, [dimension.score, delay]);
+  }, [dimension.score, delay, progressValue]);
   
   const progressBarStyle = useAnimatedStyle(() => {
     return {
-      width: `${progress.value * 100}%`
+      width: `${progress.value * 100}%`,
+      ...(isRightSideHigher 
+          ? { right: 0 }    // 右側から表示
+          : { left: 0 })    // 左側から表示
     };
   });
   
@@ -55,6 +70,12 @@ const MBTIScoreCard: React.FC<MBTIScoreCardProps> = ({
     };
   });
 
+  const barColor = getGradientColor(
+    isRightSideHigher 
+      ? (100 - dimension.score) / 100 
+      : dimension.score / 100
+  );
+
   return (
     <Reanimated.View style={[styles.container, cardStyle]}>
       <Text style={styles.dimensionName}>{dimension.name}</Text>
@@ -62,19 +83,26 @@ const MBTIScoreCard: React.FC<MBTIScoreCardProps> = ({
         <Text style={styles.label}>{dimension.label1}</Text>
         <Text style={styles.label}>{dimension.label2}</Text>
       </View>
-      <View style={styles.progressBackground}>
-        <Reanimated.View 
-          style={[
-            styles.progressFill, 
-            progressBarStyle,
-            { backgroundColor: getGradientColor(dimension.score / 100) }
-          ]} 
-        />
-      </View>
-      <View style={styles.scoreIndicator}>
-        <Text style={styles.scoreText}>
-          {Math.round(dimension.score)}%
-        </Text>
+      <View style={styles.progressContainer}>
+        <View style={styles.scoreIndicator}>
+          <Text style={styles.scoreText}>
+            {leftScore}%
+          </Text>
+        </View>
+        <View style={styles.progressBackground}>
+          <Reanimated.View 
+            style={[
+              styles.progressFill, 
+              progressBarStyle,
+              { backgroundColor: barColor }
+            ]} 
+          />
+        </View>
+        <View style={styles.scoreIndicator}>
+          <Text style={styles.scoreText}>
+            {rightScore}%
+          </Text>
+        </View>
       </View>
     </Reanimated.View>
   );
@@ -112,19 +140,26 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: Theme.colors.textSecondary,
   },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.xs,
+  },
   progressBackground: {
+    flex: 1,
     height: 8,
     backgroundColor: Theme.colors.border,
     borderRadius: Theme.borderRadius.round,
     overflow: 'hidden',
-    marginBottom: Theme.spacing.xs,
+    marginHorizontal: Theme.spacing.xs,
   },
   progressFill: {
     height: '100%',
     borderRadius: Theme.borderRadius.round,
+    position: 'absolute',
   },
   scoreIndicator: {
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-start',
   },
   scoreText: {
     fontSize: 14,
