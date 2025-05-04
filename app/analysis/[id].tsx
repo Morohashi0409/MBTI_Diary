@@ -130,6 +130,16 @@ export default function AnalysisDetailScreen() {
     return type;
   };
 
+  const formatDateForTitle = (date: Date) => {
+    // 日本語形式の日付（例: 2023年5月4日）
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long'
+    });
+  };
+
   return (
     <ScrollView 
       style={styles.container}
@@ -143,7 +153,9 @@ export default function AnalysisDetailScreen() {
           >
             <ArrowLeft size={20} color={Theme.colors.primary} />
           </TouchableOpacity>
-          <Text style={styles.title}>分析詳細</Text>
+          <Text style={styles.title}>
+            {analysis ? formatDateForTitle(analysis.timestamp) : '分析詳細'}
+          </Text>
           {analysis && (
             <TouchableOpacity 
               style={styles.shareButton}
@@ -161,12 +173,6 @@ export default function AnalysisDetailScreen() {
             <Text style={styles.mbtiType}>
               {" "}{getMBTIType(analysis.dimensions)}
             </Text>
-          </Text>
-        )}
-        
-        {analysis && (
-          <Text style={styles.dateText}>
-            分析日: {analysis.timestamp.toLocaleDateString('ja-JP')}
           </Text>
         )}
       </View>
@@ -270,13 +276,6 @@ const styles = StyleSheet.create({
   },
   resultSummary: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: Theme.colors.textSecondary,
-    textAlign: 'center',
-    marginTop: Theme.spacing.xs,
-  },
-  dateText: {
-    fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: Theme.colors.textSecondary,
     textAlign: 'center',
