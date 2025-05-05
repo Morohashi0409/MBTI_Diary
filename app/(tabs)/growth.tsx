@@ -1,40 +1,84 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Theme } from '@/constants/theme';
 import { Sparkles, Target, CircleArrowUp as ArrowUpCircle } from 'lucide-react-native';
+import { apiClient, GrowthAdvice } from '@/services/apiClient';
+import { getUserId } from '@/services/userStorage';
+import LoadingIndicator from '@/components/LoadingIndicator';
+import ErrorMessage from '@/components/ErrorMessage';
 
-// Mock advice data
-const mockAdvice = [
-  {
-    id: 1,
-    title: '内向的な特性を活かす',
-    description: '深い思考と自己理解を大切にしながら、時には小さな社交の機会も取り入れてみましょう。',
-    icon: Sparkles,
-  },
-  {
-    id: 2,
-    title: '直感力の向上',
-    description: 'パターンや関連性を見出す習慣をつけることで、より創造的な問題解決が可能になります。',
-    icon: Target,
-  },
-  {
-    id: 3,
-    title: 'バランスの取れた判断',
-    description: '論理的思考と感情的な理解のバランスを意識することで、より良い決断ができるようになります。',
-    icon: ArrowUpCircle,
-  },
-];
-
-// Mock target type advice
-const targetTypeAdvice = {
-  targetType: 'ENFJ',
-  advice: [
-    'リーダーシップの機会を積極的に求めてみましょう',
-    '他者の感情に寄り添いながら、建設的なフィードバックを提供する練習をしてみましょう',
-  ],
+// アイコンのマッピング
+const iconMap = {
+  1: Sparkles,
+  2: Target,
+  3: ArrowUpCircle,
 };
 
 export default function GrowthScreen() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [adviceData, setAdviceData] = useState<GrowthAdvice[]>([]);
+  
+  // 伸び代情報の取得
+  useEffect(() => {
+    const fetchGrowthAdvice = async () => {
+      try {
+        console.log('伸び代情報の取得を開始します');
+        setLoading(true);
+        setError(null);
+        
+        // ユーザーIDの取得
+        const userId = await getUserId();
+        console.log('取得したユーザーID:', userId);
+        
+        if (!userId) {
+          console.log('ユーザーIDが取得できませんでした');
+          setError('ユーザー情報が見つかりません。プロフィールから登録してください。');
+          setLoading(false);
+          return;
+        }
+        
+        // 伸び代情報の取得
+        console.log('APIリクエスト開始:', `/diary/user/growth/${userId}`);
+        const response = await apiClient.getGrowthAdvice(userId);
+        console.log('APIレスポンス:', response);
+        setAdviceData(response.advice);
+        
+      } catch (err) {
+        console.error('伸び代情報取得エラー:', err);
+        setError('伸び代情報の取得に失敗しました。もう一度お試しください。');
+      } finally {
+        setLoading(false);
+        console.log('伸び代情報取得処理完了');
+      }
+    };
+    
+    console.log('GrowthScreen コンポーネントがマウントされました');
+    fetchGrowthAdvice();
+    
+    return () => {
+      console.log('GrowthScreen コンポーネントがアンマウントされました');
+    };
+  }, []);
+
+  // エラー表示
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <ErrorMessage message={error} />
+      </View>
+    );
+  }
+
+  // ローディング表示
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <LoadingIndicator message="伸び代情報を取得中..." />
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -45,31 +89,21 @@ export default function GrowthScreen() {
       </View>
 
       <View style={styles.adviceSection}>
-        {mockAdvice.map((item) => (
-          <View key={item.id} style={styles.adviceCard}>
-            <View style={styles.adviceHeader}>
-              <item.icon size={24} color={Theme.colors.primary} />
-              <Text style={styles.adviceTitle}>{item.title}</Text>
-            </View>
-            <Text style={styles.adviceText}>{item.description}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* {targetTypeAdvice && (
-        <View style={styles.targetSection}>
-          <Text style={styles.sectionTitle}>
-            なりたいタイプ（{targetTypeAdvice.targetType}）に向けて
-          </Text>
-          <View style={styles.targetAdviceList}>
-            {targetTypeAdvice.advice.map((advice, index) => (
-              <View key={index} style={styles.targetAdviceItem}>
-                <Text style={styles.targetAdviceText}>• {advice}</Text>
+        {adviceData.map((item) => {
+          // アイコンのマッピング（デフォルトはSparkles）
+          const IconComponent = iconMap[item.id as keyof typeof iconMap] || Sparkles;
+          
+          return (
+            <View key={item.id} style={styles.adviceCard}>
+              <View style={styles.adviceHeader}>
+                <IconComponent size={24} color={Theme.colors.primary} />
+                <Text style={styles.adviceTitle}>{item.title}</Text>
               </View>
-            ))}
-          </View>
-        </View>
-      )} */}
+              <Text style={styles.adviceText}>{item.description}</Text>
+            </View>
+          );
+        })}
+      </View>
     </ScrollView>
   );
 }
@@ -78,6 +112,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Theme.colors.background,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     padding: Theme.spacing.lg,
@@ -118,31 +156,6 @@ const styles = StyleSheet.create({
     marginLeft: Theme.spacing.sm,
   },
   adviceText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: Theme.colors.text,
-    lineHeight: 20,
-  },
-  targetSection: {
-    padding: Theme.spacing.md,
-    backgroundColor: Theme.colors.white,
-    margin: Theme.spacing.md,
-    borderRadius: Theme.borderRadius.md,
-    ...Theme.shadows.sm,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    color: Theme.colors.text,
-    marginBottom: Theme.spacing.md,
-  },
-  targetAdviceList: {
-    marginTop: Theme.spacing.sm,
-  },
-  targetAdviceItem: {
-    marginBottom: Theme.spacing.sm,
-  },
-  targetAdviceText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: Theme.colors.text,

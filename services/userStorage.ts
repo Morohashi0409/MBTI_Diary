@@ -53,3 +53,16 @@ export const isUserRegistered = async (): Promise<boolean> => {
   const profile = await getUserProfile();
   return profile !== null;
 };
+
+/**
+ * ユーザーIDのみを取得する
+ */
+export const getUserId = async (): Promise<string | null> => {
+  try {
+    const profile = await getUserProfile();
+    return profile ? profile.userId : null;
+  } catch (error) {
+    console.error('ユーザーIDの取得に失敗しました:', error);
+    return null;
+  }
+};

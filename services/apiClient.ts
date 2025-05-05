@@ -30,12 +30,27 @@ export type DiaryAnalysisResponse = {
   created_at: string;
 };
 
+export type GrowthAdvice = {
+  id: number;
+  title: string;
+  description: string;
+};
+
+export type GrowthAdviceResponse = {
+  advice: GrowthAdvice[];
+};
+
 class ApiClient {
   private baseUrl: string;
 
   constructor() {
-    // 正しいバックエンドURLを使用
-    this.baseUrl = 'https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1';
+    // 本番のバックエンドURLを使用
+    // this.baseUrl = 'https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1';
+
+    // ローカル開発用のバックエンドURLを使用
+    this.baseUrl = 'http://0.0.0.0:8000/api/v1';
+    
+    console.log('APIクライアント初期化 - ベースURL:', this.baseUrl);
   }
 
   async analyzeAndSaveDiary(params: DiaryEntryParams): Promise<DiaryAnalysisResponse> {
@@ -98,6 +113,24 @@ class ApiClient {
     } catch (error) {
       console.error('日記取得エラー:', error);
       throw new Error('日記の取得に失敗しました。もう一度お試しください。');
+    }
+  }
+
+  // 伸び代情報を取得するメソッド - ローカル環境用のパス
+  async getGrowthAdvice(userId: string): Promise<GrowthAdviceResponse> {
+    try {
+      // ローカル環境のgrowthエンドポイントを使用
+      const response = await fetch(`${this.baseUrl}/growth/${userId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || '伸び代情報の取得に失敗しました');
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('伸び代情報取得エラー:', error);
+      throw new Error('伸び代情報の取得に失敗しました。もう一度お試しください。');
     }
   }
 }

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import logging
 from datetime import datetime
 from firebase_admin import firestore
@@ -262,3 +262,42 @@ async def get_user_diaries(user_id: str = Path(...), limit: int = Query(10)):
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="日記の取得中にエラーが発生しました")
+
+# 新しいエンドポイント: /diary/user/growth/{user_id}
+@router.get("/diary/user/growth/{user_id}", response_model=Dict[str, Any])
+async def get_user_growth_advice(user_id: str = Path(...)):
+    """
+    ユーザーの伸び代情報を取得する
+    """
+    try:
+        # ユーザーが存在するか確認
+        user_ref = db.collection('users').document(user_id)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+        
+        logger.info(f"ユーザー {user_id} の伸び代情報を取得します")
+        
+        # Dify APIを使用して伸び代情報を取得
+        growth_data = dify_service.get_growth_advice(user_id)
+        
+        logger.info(f"伸び代情報取得成功: ユーザー {user_id}")
+        
+        return growth_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"伸び代情報の取得中にエラーが発生しました: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="伸び代情報の取得中にエラーが発生しました")
+
+# 後方互換性のためにリダイレクト用のエンドポイント（非推奨）
+@router.get("/growth/{user_id}", response_model=Dict[str, Any], deprecated=True)
+async def legacy_get_growth_advice(user_id: str = Path(...)):
+    """
+    ユーザーの伸び代情報を取得する（非推奨: /diary/user/growth/{user_id}を使用してください）
+    """
+    logger.warning(f"非推奨の/growth/{user_id}エンドポイントが使用されました。代わりに/diary/user/growth/{user_id}を使用してください。")
+    return await get_user_growth_advice(user_id)
