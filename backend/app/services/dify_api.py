@@ -1,0 +1,101 @@
+import requests
+import logging
+import json
+from typing import Dict, Any
+import uuid
+
+logger = logging.getLogger(__name__)
+
+class DifyAPIService:
+    """Dify APIとの連携を行うサービスクラス"""
+    
+    def __init__(self, api_key: str = "app-s6nBuSahRj0674vWYutEFwHM"):
+        self.api_key = api_key
+        self.base_url = "https://api.dify.ai/v1"
+        self.headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        logger.info(f"Dify API初期化完了: ワークフローAPIを使用")
+    
+    def analyze_diary(self, content: str) -> Dict[str, Any]:
+        """
+        日記の内容をDify APIに送信してMBTI分析を行う
+        
+        Args:
+            content: 日記の内容
+            
+        Returns:
+            Dict[str, Any]: MBTIの次元スコア (E, N, F, J), フィードバック, 要約を含む辞書
+        """
+        try:
+            # ユーザーIDを生成（セッション追跡用）
+            user_id = f"mbti-diary-{uuid.uuid4()}"
+            
+            # Dify workflows/run エンドポイントを使用
+            result = self._call_workflow_endpoint(content, user_id)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Dify API呼び出し中にエラーが発生しました: {str(e)}")
+            # エラー時はデフォルト値を返す
+            return {
+                "dimensions": {
+                    "EI": 50.0,  # デフォルト値
+                    "SN": 50.0,
+                    "TF": 50.0,
+                    "JP": 50.0
+                },
+                "feedback": f"分析中にエラーが発生しました: {str(e)}",
+                "summary": "分析結果を取得できませんでした。もう一度お試しください。"
+            }
+    
+    def _call_workflow_endpoint(self, content: str, user_id: str) -> Dict[str, Any]:
+        """Workflows APIエンドポイントを呼び出す"""
+        endpoint = f"{self.base_url}/workflows/run"
+        
+        payload = {
+            "inputs": {
+                "text": content
+            },
+            "response_mode": "blocking",
+            "user": user_id
+        }
+        
+        logger.info(f"Dify API Workflows エンドポイントに接続: {endpoint}")
+        response = requests.post(endpoint, json=payload, headers=self.headers, timeout=60)
+        
+        if response.status_code == 200:
+            logger.info("Dify API呼び出し成功")
+            response_data = response.json()
+            
+            # レスポンスからデータを取得
+            result_data = response_data.get("data", {})
+            outputs = result_data.get("outputs", {})
+            
+            # 直接スコアを取得
+            e_score = outputs.get("E", 50.0)
+            n_score = outputs.get("N", 50.0)
+            f_score = outputs.get("F", 50.0)
+            j_score = outputs.get("J", 50.0)
+            feedback = outputs.get("feedback", "フィードバックが生成されませんでした")
+            summary = outputs.get("summary", "要約が生成されませんでした")
+            
+            logger.debug(f"分析結果: E={e_score}, N={n_score}, F={f_score}, J={j_score}")
+            logger.debug(f"フィードバック: {feedback}")
+            logger.debug(f"要約: {summary}")
+            
+            # 結果を返す
+            return {
+                "dimensions": {
+                    "EI": float(e_score),
+                    "SN": float(n_score),
+                    "TF": float(f_score),
+                    "JP": float(j_score)
+                },
+                "feedback": feedback,
+                "summary": summary
+            }
+        else:
+            logger.error(f"Dify API呼び出しエラー: {response.status_code}, {response.text}")
+            raise Exception(f"Dify API呼び出しエラー: {response.status_code}, {response.text}")

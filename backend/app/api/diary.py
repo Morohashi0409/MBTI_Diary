@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Path
 from typing import List, Optional
-import random
 import logging
 from datetime import datetime
 from firebase_admin import firestore
@@ -8,9 +7,14 @@ from firebase_admin import firestore
 from app.models.diary import DiaryEntry, DiaryAnalysis, DiaryRecord, DiaryResponse
 from app.database import db
 from app.services.user_auth import get_current_user
+from app.services.dify_api import DifyAPIService
+from app.config import settings
 
 # ロガーのセットアップ
 logger = logging.getLogger(__name__)
+
+# Dify APIサービスのインスタンス化
+dify_service = DifyAPIService(api_key=settings.DIFY_API_KEY)
 
 router = APIRouter()
 
@@ -20,16 +24,15 @@ async def analyze_and_save_diary(entry: DiaryEntry, user_id: str = Query(...)):
     日記を分析して結果をデータベースに保存し、分析結果と保存情報を返す
     """
     try:
-        # デモ用のランダムスコア生成
+        # 日記のテキストをDify APIを使って分析
+        logger.info(f"ユーザー {user_id} の日記を分析します（文字数: {len(entry.content)}）")
+        mbti_data = dify_service.analyze_diary(entry.content)
+        
+        # 分析結果をモデルに変換
         analysis = DiaryAnalysis(
-            dimensions={
-                "EI": random.uniform(0, 100),
-                "SN": random.uniform(0, 100),
-                "TF": random.uniform(0, 100),
-                "JP": random.uniform(0, 100)
-            },
-            feedback="あなたの日記からは、内向的な傾向が見られます。また、直感的な思考パターンも観察されます。感情に基づく意思決定を重視する傾向があり、柔軟な対応を好む特徴が示されています。",
-            summary="あなたの文章からは、INFPタイプの特徴が見られます。内省的で、真摯さを重んじ、状況に応じて柔軟に対応できる傾向があります。"
+            dimensions=mbti_data["dimensions"],
+            feedback=mbti_data["feedback"],
+            summary=mbti_data["summary"]
         )
         
         # ユーザーが存在するか確認
@@ -105,16 +108,13 @@ async def analyze_diary(entry: DiaryEntry, user_id: Optional[str] = Query(None))
     日記を分析してMBTIスコアを返す（非推奨：代わりにanalyze-and-saveを使用してください）
     """
     try:
-        # デモ用のランダムスコア生成
+        # Dify APIを使用して分析
+        mbti_data = dify_service.analyze_diary(entry.content)
+        
         analysis = DiaryAnalysis(
-            dimensions={
-                "EI": random.uniform(0, 100),
-                "SN": random.uniform(0, 100),
-                "TF": random.uniform(0, 100),
-                "JP": random.uniform(0, 100)
-            },
-            feedback="あなたの日記からは、内向的な傾向が見られます。また、直感的な思考パターンも観察されます。感情に基づく意思決定を重視する傾向があり、柔軟な対応を好む特徴が示されています。",
-            summary="あなたの文章からは、INFPタイプの特徴が見られます。内省的で、真摯さを重んじ、状況に応じて柔軟に対応できる傾向があります。"
+            dimensions=mbti_data["dimensions"],
+            feedback=mbti_data["feedback"],
+            summary=mbti_data["summary"]
         )
         
         logger.warning("非推奨の/diary/analyzeエンドポイントが使用されました。代わりにanalyze-and-saveを使用してください。")

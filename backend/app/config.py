@@ -16,6 +16,9 @@ class Settings(BaseSettings):
         str(BASE_DIR / "firebase-credentials.json")
     )
     
+    # Dify API関連の設定
+    DIFY_API_KEY: str = os.environ.get("DIFY_API_KEY", "app-tfRmkpyv8gsTxJFpH9gOGR2H")
+    
     class Config:
         env_file = ".env"
 
