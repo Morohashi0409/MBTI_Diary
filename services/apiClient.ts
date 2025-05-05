@@ -34,7 +34,8 @@ class ApiClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:8000/api/v1';
+    // 正しいバックエンドURLを使用
+    this.baseUrl = 'https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1';
   }
 
   async analyzeAndSaveDiary(params: DiaryEntryParams): Promise<DiaryAnalysisResponse> {

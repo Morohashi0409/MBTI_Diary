@@ -70,11 +70,8 @@ const MBTIScoreCard: React.FC<MBTIScoreCardProps> = ({
     };
   });
 
-  const barColor = getGradientColor(
-    isRightSideHigher 
-      ? (100 - dimension.score) / 100 
-      : dimension.score / 100
-  );
+  // 次元に基づいて適切なカラーを選択
+  const barColor = getDimensionColor(dimension.name);
 
   return (
     <Reanimated.View style={[styles.container, cardStyle]}>
@@ -108,12 +105,20 @@ const MBTIScoreCard: React.FC<MBTIScoreCardProps> = ({
   );
 };
 
-// Helper function to get color based on score
-const getGradientColor = (score: number) => {
-  // Left side (0) is first label, right side (1) is second label
-  if (score < 0.3) return Theme.colors.primary;
-  if (score < 0.7) return Theme.colors.secondary;
-  return Theme.colors.accent;
+// 次元に応じた色を返す関数
+const getDimensionColor = (dimensionName: string): string => {
+  switch (dimensionName) {
+    case '興味関心の方向':
+      return Theme.colors.mbti.EI;
+    case 'ものの見方':
+      return Theme.colors.mbti.SN;
+    case '判断の仕方':
+      return Theme.colors.mbti.TF;
+    case '外界への接し方':
+      return Theme.colors.mbti.JP;
+    default:
+      return Theme.colors.primary;
+  }
 };
 
 const styles = StyleSheet.create({

@@ -21,6 +21,13 @@ export const Theme = {
     border: '#E5E5E5',
     white: '#FFFFFF',
     black: '#000000',
+    // MBTI次元のカラーコード
+    mbti: {
+      EI: '#4298B4',
+      SN: '#E4AE3A',
+      TF: '#33A474',
+      JP: '#88619A',
+    },
   },
   spacing: {
     xs: 4,

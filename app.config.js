@@ -28,7 +28,8 @@ const config = {
     favicon: "./assets/images/favicon.png"
   },
   extra: {
-    apiUrl: process.env.API_URL || "https://mbti-diary-backend-XXXX-an.a.run.app/api/v1", // ここをデプロイ後のCloud Run URLに変更
+    apiUrl: process.env.API_URL || "https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1",
+    type: "analysis",
     eas: {
       projectId: "your-eas-project-id"
     }

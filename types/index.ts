@@ -11,11 +11,12 @@ export type MBTIDimension = {
 };
 
 export type AnalysisResult = {
-  id: string;
+  id?: string;
   dimensions: MBTIDimension[];
   feedback: string;
   summary: string;
   timestamp: Date;
+  content?: string; // 日記の内容
   error?: string;
 };
 
