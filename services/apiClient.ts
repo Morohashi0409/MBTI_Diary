@@ -47,11 +47,11 @@ class ApiClient {
   constructor() {
     // 環境に応じてAPIエンドポイントを選択
     if (__DEV__) {
-      // 開発環境用
-      // this.baseUrl = 'http://0.0.0.0:8000/api/v1';
+      // 開発環境用 - ローカルのバックエンドを使用
+      this.baseUrl = 'http://localhost:8000/api/v1';
       
-      // 本番環境のエンドポイントを開発中も使用することでFirebase認証の問題を解決
-      this.baseUrl = 'https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1';
+      // 本番環境のエンドポイント
+      // this.baseUrl = 'https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1';
     } else {
       // 本番環境用
       this.baseUrl = 'https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1';
@@ -63,6 +63,15 @@ class ApiClient {
   // 認証ヘッダーを生成する内部メソッド
   private async getAuthHeaders(): Promise<HeadersInit> {
     const token = await getAuthToken();
+    console.log('認証トークン取得状態:', token ? '成功' : '失敗');
+    
+    // トークンが取得できた場合はその長さをログ出力（セキュリティのため一部のみ表示）
+    if (token) {
+      console.log(`認証トークンの長さ: ${token.length}文字, 先頭部分: ${token.substring(0, 10)}...`);
+    } else {
+      console.warn('認証トークンが取得できませんでした。未ログイン状態か、トークン取得に失敗した可能性があります。');
+    }
+    
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
@@ -172,6 +181,7 @@ class ApiClient {
   async getUserDiaries(limit: number = 10): Promise<DiaryAnalysisResponse[]> {
     try {
       const headers = await this.getAuthHeaders();
+      console.log('API リクエスト送信:', limit);
       const response = await fetch(`${this.baseUrl}/diary/user?limit=${limit}`, {
         headers
       });

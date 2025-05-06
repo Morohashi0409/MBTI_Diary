@@ -170,7 +170,7 @@ export default function DiaryWriteScreen() {
           isLoading={isLoading}
         />
         
-        {isLoading && <LoadingIndicator />}
+        {isLoading && <LoadingIndicator whiteText={true} />}
         
         <View style={styles.infoContainer}>
           <Text style={styles.infoText}>

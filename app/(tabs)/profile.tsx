@@ -4,19 +4,20 @@ import {
   Text, 
   StyleSheet, 
   ScrollView, 
-  ActivityIndicator, 
   Image, 
-  TouchableOpacity, 
-  Alert 
+  TouchableOpacity 
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { Theme } from '@/constants/theme';
 import { LineChart } from '@/components/LineChart';
 import MBTIScoreCard from '@/components/MBTIScoreCard';
-import { getUserProfile, clearMBTIProfile } from '@/services/userStorage';
+import { getUserProfile, clearMBTIProfile, saveUserId } from '@/services/userStorage';
 import { apiClient, DiaryAnalysisResponse } from '@/services/apiClient';
 import ErrorMessage from '@/components/ErrorMessage';
 import { getCurrentUser, signOut } from '@/services/firebaseService';
 import { LogOut } from 'lucide-react-native';
+import LoadingIndicator from '@/components/LoadingIndicator';
 
 // MBTI次元のデータ型
 type MBTIDimension = {
@@ -248,32 +249,31 @@ export default function ProfileScreen() {
 
   // ログアウト処理
   const handleLogout = () => {
-    Alert.alert(
-      'ログアウト確認',
-      'ログアウトしますか？',
-      [
-        {
-          text: 'キャンセル',
-          style: 'cancel',
-        },
-        {
-          text: 'ログアウト',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // ローカルのMBTIプロファイル情報をクリア
-              await clearMBTIProfile();
-              // Firebase認証からログアウト
-              await signOut();
-            } catch (error) {
-              console.error('ログアウトエラー:', error);
-              Alert.alert('エラー', 'ログアウトに失敗しました。もう一度お試しください。');
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
+    console.log('ログアウトボタンが押されました');
+    
+    // アラートを使わず直接ログアウト処理を実行
+    const executeLogout = async () => {
+      try {
+        console.log('ログアウト処理を開始します');
+        
+        // ローカルのMBTIプロファイル情報をクリア
+        console.log('MBTIプロファイル情報をクリアします');
+        await clearMBTIProfile();
+        
+        // Firebase認証からログアウト
+        console.log('Firebaseからログアウトします');
+        await signOut();
+        
+        console.log('ログアウト成功、ルート画面に遷移します');
+        
+        // ルート画面に遷移
+        router.navigate('/');
+      } catch (error) {
+        console.error('ログアウトエラー:', error);
+      }
+    };
+    
+    executeLogout();
   };
 
   // コンポーネントがマウントされたときにユーザープロフィールと日記データを取得
@@ -288,6 +288,10 @@ export default function ProfileScreen() {
         setUserProfile(profile);
         
         if (profile && profile.userId) {
+          // ユーザーIDをAsyncStorageに保存（他の画面でも使用できるようにするため）
+          console.log('プロフィール画面: ユーザーIDを保存します:', profile.userId);
+          await saveUserId(profile.userId);
+          
           // 過去10日間の日記データを取得
           const diaryData = await apiClient.getUserDiaries(10);
           setDiaries(diaryData);
@@ -313,11 +317,51 @@ export default function ProfileScreen() {
     fetchData();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchData = async () => {
+        try {
+          setIsLoading(true);
+          setError(null);
+          
+          // ユーザープロフィールを取得
+          const profile = await getUserProfile();
+          setUserProfile(profile);
+          
+          if (profile && profile.userId) {
+            // 過去10日間の日記データを取得
+            const diaryData = await apiClient.getUserDiaries(10);
+            setDiaries(diaryData);
+            
+            // 平均MBTIスコアを計算
+            const avgDimensions = calculateAverageDimensions(diaryData);
+            setCurrentDimensions(avgDimensions);
+            
+            // 時系列データを生成
+            if (diaryData.length > 0) {
+              const timeline = generateTimelineData(diaryData);
+              setTimelineData(timeline);
+            }
+          }
+        } catch (error) {
+          console.error('データ取得エラー:', error);
+          setError('データの取得中にエラーが発生しました。もう一度お試しください。');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchData();
+    }, [])
+  );
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Theme.colors.white} />
-        <Text style={styles.loadingText}>データを読み込み中...</Text>
+        <LoadingIndicator 
+          text="データを読み込み中..." 
+          isProfile={true} 
+        />
       </View>
     );
   }
@@ -478,6 +522,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: Theme.spacing.xxl,
+    backgroundColor: Theme.colors.background, // 背景色を明示的に設定
   },
   loadingText: {
     marginTop: Theme.spacing.md,
@@ -608,6 +653,7 @@ const styles = StyleSheet.create({
   },
   currentScores: {
     padding: Theme.spacing.md,
+    backgroundColor: Theme.colors.card, // 背景色をカードと同じグレーに変更
   },
   timelineSection: {
     padding: Theme.spacing.md,
@@ -632,11 +678,14 @@ const styles = StyleSheet.create({
   },
   insightSection: {
     padding: Theme.spacing.md,
+    backgroundColor: Theme.colors.card, // 背景色をカードと同じグレーに変更
   },
   insightCard: {
     backgroundColor: Theme.colors.card,
     padding: Theme.spacing.md,
     borderRadius: Theme.borderRadius.md,
+    borderWidth: 1, // 境界線を追加してカード感を維持
+    borderColor: Theme.colors.border,
     ...Theme.shadows.sm,
   },
   insightText: {
@@ -649,6 +698,7 @@ const styles = StyleSheet.create({
     padding: Theme.spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Theme.colors.card, // 背景色をカードと同じグレーに変更
   },
   noDataText: {
     fontSize: 14,

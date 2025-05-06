@@ -27,7 +27,7 @@ export default function GrowthScreen() {
         setLoading(true);
         setError(null);
         
-        // ユーザーIDの取得
+        // ユーザーIDの取得 (非同期関数になったため、awaitを使用)
         const userId = await getUserId();
         console.log('取得したユーザーID:', userId);
         
@@ -74,7 +74,7 @@ export default function GrowthScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <LoadingIndicator message="のびしろ情報を取得中..." />
+        <LoadingIndicator message="のびしろ情報を取得中..." whiteText={true} />
       </View>
     );
   }
