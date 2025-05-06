@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -7,13 +7,16 @@ import {
   TouchableOpacity, 
   Keyboard,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { router } from 'expo-router';
-import { useDiaryAnalyze } from '@/hooks/useDiaryAnalyze';
+import { useDiaryAnalyze, USER_NOT_REGISTERED_ERROR } from '@/hooks/useDiaryAnalyze';
 import DiaryInput from '@/components/DiaryInput';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import ErrorMessage from '@/components/ErrorMessage';
+import UserRegistrationModal from '@/components/UserRegistrationModal';
+import { isUserRegistered } from '@/services/userStorage';
 import { Theme } from '@/constants/theme';
 import { Book, Send } from 'lucide-react-native';
 import Animated, { 
@@ -25,16 +28,71 @@ import Animated, {
 } from 'react-native-reanimated';
 
 export default function DiaryWriteScreen() {
-  const { analyzeDiary, isLoading, error, result } = useDiaryAnalyze();
+  const { analyzeDiary, isLoading, error, result, needsRegistration } = useDiaryAnalyze();
   const [showGuide, setShowGuide] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const guideHeight = useSharedValue(0);
+
+  // コンポーネントマウント時に実行する初期化処理
+  useEffect(() => {
+    const initialize = async () => {
+      // ユーザー登録状態を確認
+      const registered = await isUserRegistered();
+      if (!registered) {
+        console.log('ユーザーが登録されていません。登録モーダルを表示します。');
+        setShowRegistrationModal(true);
+      } else {
+        console.log('ユーザーは登録済みです');
+      }
+    };
+    
+    initialize();
+  }, []);
+  
+  // needsRegistrationフラグが変更されたときに登録モーダルを表示
+  useEffect(() => {
+    if (needsRegistration) {
+      console.log('ユーザー登録が必要です。登録モーダルを表示します。');
+      setShowRegistrationModal(true);
+    }
+  }, [needsRegistration]);
   
   const handleSubmitDiary = async (content: string) => {
-    const analysisResult = await analyzeDiary(content);
-    if (analysisResult && analysisResult.id) {
-      // 分析詳細画面に分析IDを渡して遷移
-      router.push(`/analysis/${analysisResult.id}`);
+    // 登録確認を行ってから処理
+    const registered = await isUserRegistered();
+    if (!registered) {
+      console.log('日記分析前のチェック: ユーザーが登録されていません');
+      setShowRegistrationModal(true);
+      return;
     }
+    
+    // 日記分析を実行
+    try {
+      const analysisResult = await analyzeDiary(content);
+      if (analysisResult && analysisResult.id) {
+        // 分析詳細画面に分析IDを渡して遷移
+        router.push(`/analysis/${analysisResult.id}`);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('ユーザーが見つかりません')) {
+        console.log('ユーザーが見つからない例外をキャッチしました。登録モーダルを表示します。');
+        setShowRegistrationModal(true);
+      } else {
+        console.error('日記分析エラー:', err);
+      }
+    }
+  };
+  
+  // 登録完了時の処理
+  const handleRegistrationComplete = () => {
+    console.log('ユーザー登録が完了しました');
+    setShowRegistrationModal(false);
+    // 必要に応じて状態をリセットするか、確認メッセージを表示
+    Alert.alert(
+      'プロフィール登録完了',
+      '登録が完了しました。これからMBTI日記をお楽しみください！',
+      [{ text: 'OK' }]
+    );
   };
   
   const toggleGuide = () => {
@@ -97,7 +155,8 @@ export default function DiaryWriteScreen() {
           あなたの一日、考え、感情について自由に書いてください。AIがあなたの文章からMBTIの特徴を分析します。
         </Text>
         
-        {error && (
+        {/* エラーメッセージ（ユーザー未登録エラー以外） */}
+        {error && error !== USER_NOT_REGISTERED_ERROR && (
           <ErrorMessage 
             message={error} 
             onRetry={() => {
@@ -119,6 +178,12 @@ export default function DiaryWriteScreen() {
           </Text>
         </View>
       </ScrollView>
+      
+      {/* ユーザー登録モーダル */}
+      <UserRegistrationModal 
+        visible={showRegistrationModal} 
+        onComplete={handleRegistrationComplete} 
+      />
     </KeyboardAvoidingView>
   );
 }

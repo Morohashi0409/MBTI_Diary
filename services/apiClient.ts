@@ -8,7 +8,7 @@ export type DiaryEntryParams = {
 export type RegisterUserParams = {
   username: string;
   mbti: string;
-  firebaseUid: string;
+  firebase_uid: string;  // firebaseUid から firebase_uid に変更
 };
 
 export type RegisterUserResponse = {
@@ -79,20 +79,44 @@ class ApiClient {
       const headers = await this.getAuthHeaders();
       const url = `${this.baseUrl}/diary/analyze-and-save`;
       
+      console.log('API リクエスト送信:', url);
+      
       const response = await fetch(url, {
         method: 'POST',
         headers,
         body: JSON.stringify({ content: params.content }),
       });
       
+      console.log('API レスポンスステータス:', response.status);
+      
+      // エラーレスポンスの詳細なハンドリング
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || '日記の分析・保存に失敗しました');
+        if (response.status === 404) {
+          console.error('APIエンドポイントが見つかりません (404):', url);
+          throw new Error(`APIエンドポイントが見つかりません: ${url}`);
+        }
+        
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          console.error('エラーレスポンスの解析に失敗:', e);
+          throw new Error(`API エラー (${response.status}): レスポンスを解析できませんでした`);
+        }
+        
+        // サーバーからのエラーメッセージを保持
+        const errorMessage = errorData.detail || '日記の分析・保存に失敗しました';
+        console.error('サーバーエラー:', errorMessage);
+        throw new Error(errorMessage);
       }
       
       return response.json();
     } catch (error) {
       console.error('日記分析エラー:', error);
+      // エラーメッセージをそのまま再スロー
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('日記の分析・保存に失敗しました。もう一度お試しください。');
     }
   }
@@ -106,15 +130,41 @@ class ApiClient {
         body: JSON.stringify(params),
       });
       
+      // 409 Conflictエラーの場合は、既存ユーザー情報を取得して返す
+      if (response.status === 409) {
+        console.log('ユーザーは既に登録されています。ユーザー情報を取得します。');
+        return this.getUserProfile();
+      }
+      
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'ユーザー登録に失敗しました');
+        throw new Error(errorData.error || errorData.detail || 'ユーザー登録に失敗しました');
       }
       
       return response.json();
     } catch (error) {
       console.error('ユーザー登録エラー:', error);
-      throw new Error('ユーザー登録に失敗しました。もう一度お試しください。');
+      throw error instanceof Error ? error : new Error('ユーザー登録に失敗しました。もう一度お試しください。');
+    }
+  }
+  
+  // ユーザープロフィール情報を取得するメソッド
+  async getUserProfile(): Promise<RegisterUserResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseUrl}/users/me`, {
+        headers
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'ユーザー情報の取得に失敗しました');
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('ユーザー情報取得エラー:', error);
+      throw error instanceof Error ? error : new Error('ユーザー情報の取得に失敗しました。もう一度お試しください。');
     }
   }
   

@@ -7,6 +7,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# マークダウンマーカーを削除するためのスクリプト
+# ファイル内のすべてのマークダウンマーカーを削除
+RUN sed -i '1s/^````$//' /app/app/api/diary.py
+RUN sed -i 's/^    ```$//g' /app/app/api/diary.py
+RUN sed -i 's/```$//g' /app/app/api/diary.py
+
 # 環境変数PORTが設定されていればその値を使用し、未設定なら8080をデフォルトとする
 ENV PORT=8080
 

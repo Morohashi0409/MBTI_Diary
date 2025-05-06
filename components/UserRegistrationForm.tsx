@@ -207,11 +207,13 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({ onRegistrat
       const response = await apiClient.createUserAccount({
         username: username.trim(),
         mbti: selectedMBTI,
-        firebaseUid: firebaseUser.uid
+        firebase_uid: firebaseUser.uid  // firebaseUid から firebase_uid に変更
       });
 
-      // MBTIプロファイル情報のみを保存
+      // レスポンスからユーザーIDを取得してローカルストレージに保存
+      // userId をローカルストレージに保存
       await saveMBTIProfile({
+        userId: response.userId, // サーバーから返されたユーザーID
         username: response.username,
         mbti: response.mbti
       });

@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { apiClient, DiaryAnalysisResponse } from '@/services/apiClient';
 import { AnalysisResult, MBTIDimension } from '@/types';
-import { getUserProfile } from '@/services/userStorage';
+import { getUserProfile, isUserRegistered } from '@/services/userStorage';
+
+// 登録未完了エラーを識別するための定数
+export const USER_NOT_REGISTERED_ERROR = 'ユーザーが見つかりません。アプリでユーザー登録を完了してください。';
 
 export const useDiaryAnalyze = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -9,6 +12,8 @@ export const useDiaryAnalyze = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamedResult, setStreamedResult] = useState<Partial<AnalysisResult> | null>(null);
+  // ユーザー登録が必要かどうかを示す状態
+  const [needsRegistration, setNeedsRegistration] = useState(false);
 
   const mapApiResponseToAnalysisResult = (apiResponse: DiaryAnalysisResponse): AnalysisResult => {
     const dimensions: MBTIDimension[] = [
@@ -52,11 +57,20 @@ export const useDiaryAnalyze = () => {
     setError(null);
     setStreamedResult(null);
     setIsStreaming(false);
+    setNeedsRegistration(false);
     
     try {
+      // まずユーザーが登録済みかどうかを確認
+      const registered = await isUserRegistered();
+      if (!registered) {
+        setNeedsRegistration(true);
+        throw new Error(USER_NOT_REGISTERED_ERROR);
+      }
+      
       // ユーザープロファイルを取得してユーザーIDを抽出
       const userProfile = await getUserProfile();
       if (!userProfile || !userProfile.userId) {
+        setNeedsRegistration(true);
         throw new Error('ユーザープロフィールが見つかりません。再ログインしてください。');
       }
       
@@ -107,6 +121,12 @@ export const useDiaryAnalyze = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
       setError(errorMessage);
+      
+      // エラーメッセージがユーザー未登録を示す場合
+      if (errorMessage.includes('ユーザーが見つかりません')) {
+        setNeedsRegistration(true);
+      }
+      
       setIsLoading(false);
       setIsStreaming(false);
       return null;
@@ -120,5 +140,6 @@ export const useDiaryAnalyze = () => {
     result,
     isStreaming,
     streamedResult,
+    needsRegistration, // 新しいフラグを返す
   };
 };
