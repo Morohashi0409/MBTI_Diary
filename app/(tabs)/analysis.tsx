@@ -127,7 +127,8 @@ export default function AnalysisScreen() {
         throw new Error('ユーザープロフィールが見つかりません。再ログインしてください。');
       }
       
-      const response = await apiClient.getUserDiaries(userProfile.userId);
+      // APIクライアントを使って日記履歴を取得（limitは数値型10を渡す）
+      const response = await apiClient.getUserDiaries(10);
       setDiaries(response);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';

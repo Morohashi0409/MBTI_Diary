@@ -90,7 +90,7 @@ export default function AnalysisDetailScreen() {
           throw new Error('ユーザープロフィールが見つかりません。再ログインしてください。');
         }
         
-        const diaries = await apiClient.getUserDiaries(userProfile.userId);
+        const diaries = await apiClient.getUserDiaries(10);
         const diary = diaries.find(d => d.id === params.id);
         
         if (!diary) {

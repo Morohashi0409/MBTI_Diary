@@ -480,4 +480,4 @@ async def legacy_get_growth_advice(user_id: str = Path(...)):
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="のびしろ情報の取得中にエラーが発生しました")
-```
+# ```

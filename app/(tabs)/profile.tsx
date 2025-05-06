@@ -289,7 +289,7 @@ export default function ProfileScreen() {
         
         if (profile && profile.userId) {
           // 過去10日間の日記データを取得
-          const diaryData = await apiClient.getUserDiaries(profile.userId, 10);
+          const diaryData = await apiClient.getUserDiaries(10);
           setDiaries(diaryData);
           
           // 平均MBTIスコアを計算
