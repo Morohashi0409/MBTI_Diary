@@ -1,8 +1,8 @@
 runtime: nodejs18
 handlers:
   - url: /
-    static_files: web-build/index.html
-    upload: web-build/index.html
+    static_files: dist/index.html
+    upload: dist/index.html
   - url: /(.*)
-    static_files: web-build/\1
-    upload: web-build/(.*)
+    static_files: dist/\1
+    upload: dist/(.*)

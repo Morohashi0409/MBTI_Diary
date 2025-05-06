@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import * as SplashScreen from 'expo-splash-screen';
@@ -16,6 +16,8 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useFrameworkReady();
+  const router = useRouter();
+  const segments = useSegments();
   
   const [fontsLoaded, fontError] = useFonts({
     'Inter-Regular': Inter_400Regular,
@@ -28,6 +30,36 @@ export default function RootLayout() {
   const [isCheckingUser, setIsCheckingUser] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [hasCheckedInitialAuth, setHasCheckedInitialAuth] = useState<boolean>(false);
+
+  // 登録完了時のハンドラー - より強力な実装
+  const handleRegistrationComplete = useCallback(() => {
+    console.log('登録完了処理を開始します');
+    setShowRegistration(false);
+    
+    // 現在のパスをログ出力
+    console.log('現在のパス:', segments.join('/'));
+    
+    // 少し遅延を入れて確実に画面遷移させる（モーダルの閉じるアニメーションの後）
+    setTimeout(() => {
+      try {
+        console.log('日記画面への遷移を実行します');
+        // Webブラウザで確実に動作するよう対策
+        if (typeof window !== 'undefined') {
+          // 直接URL変更（最終手段）
+          window.location.href = '/';
+        } else {
+          // ネイティブ環境の場合は通常の遷移
+          router.replace('/(tabs)');
+        }
+      } catch (error) {
+        console.error('画面遷移エラー:', error);
+        // 別の方法を試す
+        router.replace('/');
+      }
+    }, 300);
+    
+    console.log('登録完了：日記画面に遷移します');
+  }, [router, segments]);
 
   // アプリ起動時の初期認証状態チェック
   useEffect(() => {
@@ -161,7 +193,7 @@ export default function RootLayout() {
       {/* ユーザー登録モーダル - Firebase認証済みかつプロファイル未登録の場合のみ表示 */}
       <UserRegistrationModal 
         visible={showRegistration} 
-        onComplete={() => setShowRegistration(false)} 
+        onComplete={handleRegistrationComplete} 
       />
     </>
   );
