@@ -170,6 +170,11 @@ export default function AnalysisDetailScreen() {
     
     return type;
   };
+
+  // MBTIタイプに対応する色を取得する関数
+  const getMBTITypeColor = (type: string): string => {
+    return Theme.colors.mbtiType[type] || Theme.colors.white;
+  };
   
   const getMBTIDescription = (type: string) => {
     return MBTI_TYPE_DESCRIPTIONS[type] || 'このタイプの説明はまだ準備されていません。';
@@ -239,14 +244,24 @@ export default function AnalysisDetailScreen() {
                   <Text style={styles.personalityTypeLabel}>
                     あなたのパーソナリティタイプ:
                   </Text>
-                  <Text style={styles.personalityTypeValue}>
+                  <Text 
+                    style={[
+                      styles.personalityTypeValue,
+                      { color: getMBTITypeColor(getMBTIType(analysis.dimensions)) }
+                    ]}
+                  >
                     {getMBTIType(analysis.dimensions)}
                   </Text>
                 </View>
                 
                 {/* 小さなアイコンとして画像を表示 */}
                 {getMBTIImage(getMBTIType(analysis.dimensions)) && (
-                  <View style={styles.smallImageContainer}>
+                  <View 
+                    style={[
+                      styles.smallImageContainer,
+                      { borderColor: getMBTITypeColor(getMBTIType(analysis.dimensions)) + '50' }
+                    ]}
+                  >
                     <Image 
                       source={getMBTIImage(getMBTIType(analysis.dimensions))}
                       style={styles.smallTypeImage}
@@ -401,7 +416,6 @@ const styles = StyleSheet.create({
   personalityTypeValue: {
     fontSize: 32,
     fontFamily: 'Inter-Bold',
-    color: Theme.colors.primary,
     marginBottom: Theme.spacing.xs,
   },
   personalityTypeDescription: {
@@ -419,7 +433,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginLeft: Theme.spacing.md,
     borderWidth: 2,
-    borderColor: Theme.colors.primary + '50',
   },
   smallTypeImage: {
     width: '100%',

@@ -37,6 +37,11 @@ const DiaryItem: React.FC<DiaryItemProps> = ({ diary, onPress }) => {
     return type;
   };
   
+  // MBTIタイプに対応する色を取得する関数
+  const getMBTITypeColor = (type: string): string => {
+    return Theme.colors.mbtiType[type] || Theme.colors.white;
+  };
+  
   // 日付をフォーマット
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -54,6 +59,7 @@ const DiaryItem: React.FC<DiaryItemProps> = ({ diary, onPress }) => {
   };
   
   const mbtiType = getMBTIType(diary.dimensions);
+  const mbtiColor = getMBTITypeColor(mbtiType);
   
   return (
     <TouchableOpacity 
@@ -63,8 +69,13 @@ const DiaryItem: React.FC<DiaryItemProps> = ({ diary, onPress }) => {
     >
       <View style={styles.diaryHeader}>
         <Text style={styles.diaryDate}>{formatDate(diary.created_at)}</Text>
-        <View style={styles.mbtiTypeContainer}>
-          <Text style={styles.mbtiType}>{mbtiType}</Text>
+        <View 
+          style={[
+            styles.mbtiTypeContainer, 
+            { backgroundColor: mbtiColor + '20' }
+          ]}
+        >
+          <Text style={[styles.mbtiType, { color: mbtiColor }]}>{mbtiType}</Text>
         </View>
       </View>
       
@@ -75,20 +86,20 @@ const DiaryItem: React.FC<DiaryItemProps> = ({ diary, onPress }) => {
       <View style={styles.diaryFooter}>
         <View style={styles.dimensionsContainer}>
           <View style={styles.dimensionItem}>
-            <Text style={styles.dimensionLabel}>E-I</Text>
-            <Text style={styles.dimensionValue}>{diary.dimensions.EI.toFixed(1)}</Text>
+            <Text style={[styles.dimensionLabel, { color: Theme.colors.mbti.EI }]}>E-I</Text>
+            <Text style={[styles.dimensionValue, { color: Theme.colors.mbti.EI }]}>{diary.dimensions.EI.toFixed(1)}</Text>
           </View>
           <View style={styles.dimensionItem}>
-            <Text style={styles.dimensionLabel}>S-N</Text>
-            <Text style={styles.dimensionValue}>{diary.dimensions.SN.toFixed(1)}</Text>
+            <Text style={[styles.dimensionLabel, { color: Theme.colors.mbti.SN }]}>S-N</Text>
+            <Text style={[styles.dimensionValue, { color: Theme.colors.mbti.SN }]}>{diary.dimensions.SN.toFixed(1)}</Text>
           </View>
           <View style={styles.dimensionItem}>
-            <Text style={styles.dimensionLabel}>T-F</Text>
-            <Text style={styles.dimensionValue}>{diary.dimensions.TF.toFixed(1)}</Text>
+            <Text style={[styles.dimensionLabel, { color: Theme.colors.mbti.TF }]}>T-F</Text>
+            <Text style={[styles.dimensionValue, { color: Theme.colors.mbti.TF }]}>{diary.dimensions.TF.toFixed(1)}</Text>
           </View>
           <View style={styles.dimensionItem}>
-            <Text style={styles.dimensionLabel}>J-P</Text>
-            <Text style={styles.dimensionValue}>{diary.dimensions.JP.toFixed(1)}</Text>
+            <Text style={[styles.dimensionLabel, { color: Theme.colors.mbti.JP }]}>J-P</Text>
+            <Text style={[styles.dimensionValue, { color: Theme.colors.mbti.JP }]}>{diary.dimensions.JP.toFixed(1)}</Text>
           </View>
         </View>
         

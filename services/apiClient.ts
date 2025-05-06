@@ -116,7 +116,7 @@ class ApiClient {
     }
   }
 
-  // 伸び代情報を取得するメソッド - ローカル環境用のパス
+  //のびしろ 情報を取得するメソッド - ローカル環境用のパス
   async getGrowthAdvice(userId: string): Promise<GrowthAdviceResponse> {
     try {
       // ローカル環境のgrowthエンドポイントを使用
@@ -124,13 +124,13 @@ class ApiClient {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || '伸び代情報の取得に失敗しました');
+        throw new Error(errorData.detail || 'のびしろ情報の取得に失敗しました');
       }
       
       return response.json();
     } catch (error) {
-      console.error('伸び代情報取得エラー:', error);
-      throw new Error('伸び代情報の取得に失敗しました。もう一度お試しください。');
+      console.error('のびしろ情報取得エラー:', error);
+      throw new Error('のびしろ情報の取得に失敗しました。もう一度お試しください。');
     }
   }
 }

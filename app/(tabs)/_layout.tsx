@@ -6,28 +6,45 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Theme.colors.primary,
+        tabBarActiveTintColor: Theme.colors.white,
         tabBarInactiveTintColor: Theme.colors.textTertiary,
         tabBarLabelStyle: {
           fontFamily: 'Inter-Medium',
           fontSize: 12,
           marginBottom: 4,
+          textAlign: 'center',
+        },
+        tabBarItemStyle: {
+          alignItems: 'center',
         },
         tabBarStyle: {
-          backgroundColor: Theme.colors.white,
+          backgroundColor: Theme.colors.card,
           borderTopColor: Theme.colors.border,
           height: 60,
           paddingTop: 8,
+          shadowColor: Theme.colors.black,
+          shadowOpacity: 0.2,
+          shadowOffset: { width: 0, height: -1 },
+          shadowRadius: 3,
+          elevation: 4,
         },
         headerStyle: {
-          backgroundColor: Theme.colors.primary,
+          backgroundColor: Theme.colors.card,
+          shadowColor: Theme.colors.black,
+          shadowOpacity: 0.2,
+          shadowOffset: { width: 0, height: 1 },
+          shadowRadius: 3,
+          elevation: 4,
         },
-        headerTintColor: Theme.colors.white,
+        headerTintColor: Theme.colors.text,
         headerTitleStyle: {
           fontFamily: 'Inter-Medium',
           fontSize: 18,
+          textAlign: 'center',
+          color: Theme.colors.white,
         },
-        headerShadowVisible: false,
+        headerTitleAlign: 'center',
+        headerShadowVisible: true,
       }}
     >
       <Tabs.Screen
@@ -37,7 +54,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <BookOpen size={size} color={color} />
           ),
-          headerTitle: '私の日記',
+          headerTitle: '日記',
         }}
       />
       <Tabs.Screen
@@ -47,7 +64,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <BarChart2 size={size} color={color} />
           ),
-          headerTitle: 'MBTI分析',
+          headerTitle: 'MBTI',
         }}
       />
       <Tabs.Screen
@@ -63,11 +80,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="growth"
         options={{
-          title: '伸び代',
+          title: 'のびしろ',
           tabBarIcon: ({ color, size }) => (
             <Sparkles size={size} color={color} />
           ),
-          headerTitle: '伸び代',
+          headerTitle: 'のびしろ',
         }}
       />
     </Tabs>

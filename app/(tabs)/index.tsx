@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   guideTitle: {
     fontSize: 16,
     fontFamily: 'Inter-Medium',
-    color: Theme.colors.secondaryDark,
+    color: Theme.colors.primary,
     marginBottom: Theme.spacing.sm,
   },
   guideTipContainer: {

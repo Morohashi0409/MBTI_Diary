@@ -267,7 +267,7 @@ async def get_user_diaries(user_id: str = Path(...), limit: int = Query(10)):
 @router.get("/diary/user/growth/{user_id}", response_model=Dict[str, Any])
 async def get_user_growth_advice(user_id: str = Path(...)):
     """
-    ユーザーの伸び代情報を取得する
+    ユーザーののびしろ情報を取得する
     """
     try:
         # ユーザーが存在するか確認
@@ -277,27 +277,27 @@ async def get_user_growth_advice(user_id: str = Path(...)):
         if not user_doc.exists:
             raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
         
-        logger.info(f"ユーザー {user_id} の伸び代情報を取得します")
+        logger.info(f"ユーザー {user_id} ののびしろ情報を取得します")
         
-        # Dify APIを使用して伸び代情報を取得
+        # Dify APIを使用してのびしろ情報を取得
         growth_data = dify_service.get_growth_advice(user_id)
         
-        logger.info(f"伸び代情報取得成功: ユーザー {user_id}")
+        logger.info(f"のびしろ情報取得成功: ユーザー {user_id}")
         
         return growth_data
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"伸び代情報の取得中にエラーが発生しました: {str(e)}")
+        logger.error(f"のびしろ情報の取得中にエラーが発生しました: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail="伸び代情報の取得中にエラーが発生しました")
+        raise HTTPException(status_code=500, detail="のびしろ情報の取得中にエラーが発生しました")
 
 # 後方互換性のためにリダイレクト用のエンドポイント（非推奨）
 @router.get("/growth/{user_id}", response_model=Dict[str, Any], deprecated=True)
 async def legacy_get_growth_advice(user_id: str = Path(...)):
     """
-    ユーザーの伸び代情報を取得する（非推奨: /diary/user/growth/{user_id}を使用してください）
+    ユーザーののびしろ情報を取得する（非推奨: /diary/user/growth/{user_id}を使用してください）
     """
     logger.warning(f"非推奨の/growth/{user_id}エンドポイントが使用されました。代わりに/diary/user/growth/{user_id}を使用してください。")
     return await get_user_growth_advice(user_id)

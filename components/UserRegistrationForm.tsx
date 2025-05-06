@@ -34,6 +34,20 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({ onRegistrat
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 選択されたMBTIタイプに基づいてアクセントカラーを取得
+  const getAccentColorForMBTI = (mbtiType: string): string => {
+    // タイプの最初の文字に基づいてカラーを選択
+    if (mbtiType.startsWith('E') || mbtiType.startsWith('I')) {
+      return Theme.colors.mbti.EI; // 青色: #4298B4
+    } else if (mbtiType.startsWith('S') || mbtiType.startsWith('N')) {
+      return Theme.colors.mbti.SN; // 黄色: #E4AE3A
+    } else if (mbtiType.startsWith('T') || mbtiType.startsWith('F')) {
+      return Theme.colors.mbti.TF; // 緑色: #33A474
+    } else {
+      return Theme.colors.mbti.JP; // 紫色: #88619A
+    }
+  };
+
   const handleSubmit = async () => {
     // バリデーション
     if (!username.trim()) {
@@ -69,6 +83,8 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({ onRegistrat
     }
   };
 
+  const accentColor = getAccentColorForMBTI(selectedMBTI);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -76,7 +92,7 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({ onRegistrat
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
       <View style={styles.formContainer}>
-        <Text style={styles.title}>MBTI日記へようこそ！</Text>
+        <Text style={[styles.title, { color: accentColor }]}>MBTI日記へようこそ！</Text>
         <Text style={styles.subtitle}>まずはプロフィールを設定しましょう</Text>
 
         <View style={styles.inputGroup}>
@@ -99,23 +115,25 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({ onRegistrat
               selectedValue={selectedMBTI}
               onValueChange={(itemValue) => setSelectedMBTI(itemValue)}
               style={styles.picker}
+              dropdownIconColor={Theme.colors.text}
+              itemStyle={{ color: Theme.colors.text }}
             >
               {MBTI_TYPES.map((type) => (
-                <Picker.Item key={type} label={type} value={type} />
+                <Picker.Item key={type} label={type} value={type} color={Theme.colors.text} />
               ))}
             </Picker>
           </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.button, isLoading && styles.buttonDisabled]}
+          style={[styles.button, { backgroundColor: Theme.colors.white }, isLoading && styles.buttonDisabled]}
           onPress={handleSubmit}
           disabled={isLoading}
         >
           {isLoading ? (
-            <ActivityIndicator color={Theme.colors.white} />
+            <ActivityIndicator color={accentColor} />
           ) : (
-            <Text style={styles.buttonText}>登録</Text>
+            <Text style={[styles.buttonText, { color: accentColor }]}>登録</Text>
           )}
         </TouchableOpacity>
 
@@ -147,7 +165,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: Theme.typography.fontSize.xxl,
     fontFamily: Theme.typography.fontFamily.bold,
-    color: Theme.colors.text,
     marginBottom: Theme.spacing.sm,
     textAlign: 'center',
   },
@@ -187,17 +204,17 @@ const styles = StyleSheet.create({
   picker: {
     height: 50,
     width: '100%',
+    color: Theme.colors.text,
   },
   button: {
     height: 50,
-    backgroundColor: Theme.colors.primary,
     borderRadius: Theme.borderRadius.round,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: Theme.spacing.lg,
   },
   buttonDisabled: {
-    backgroundColor: Theme.colors.primaryLight,
+    opacity: 0.7,
   },
   buttonText: {
     color: Theme.colors.white,

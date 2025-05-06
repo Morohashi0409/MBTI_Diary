@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { Theme } from '@/constants/theme';
 import { LineChart } from '@/components/LineChart';
 import MBTIScoreCard from '@/components/MBTIScoreCard';
@@ -23,6 +23,26 @@ type TimelineData = {
     data: number[];
     color: string;
   }[];
+};
+
+// MBTIタイプごとの画像を静的にインポート
+const MBTI_TYPE_IMAGES = {
+  'INTJ': require('@/assets/images/hedgehog/INTJ.jpeg'),
+  'INTP': require('@/assets/images/hedgehog/INTP.jpeg'),
+  'ENTJ': require('@/assets/images/hedgehog/ENTJ.jpeg'),
+  'ENTP': require('@/assets/images/hedgehog/ENTP.jpeg'),
+  'INFJ': require('@/assets/images/hedgehog/INFJ.jpeg'),
+  'INFP': require('@/assets/images/hedgehog/INFP.jpeg'),
+  'ENFJ': require('@/assets/images/hedgehog/ENFJ.jpeg'),
+  'ENFP': require('@/assets/images/hedgehog/ENFP.jpeg'),
+  'ISTJ': require('@/assets/images/hedgehog/ISTJ.jpeg'),
+  'ISFJ': require('@/assets/images/hedgehog/ISFJ.jpeg'),
+  'ESTJ': require('@/assets/images/hedgehog/ESTJ.jpeg'),
+  'ESFJ': require('@/assets/images/hedgehog/ESFJ.jpeg'),
+  'ISTP': require('@/assets/images/hedgehog/ISTP.jpeg'),
+  'ISFP': require('@/assets/images/hedgehog/ISFP.jpeg'),
+  'ESTP': require('@/assets/images/hedgehog/ESTP.jpeg'),
+  'ESFP': require('@/assets/images/hedgehog/ESFP.jpeg'),
 };
 
 export default function ProfileScreen() {
@@ -135,6 +155,16 @@ export default function ProfileScreen() {
       dimensions[3].score > 50 ? 'J' : 'P',
     ].join('');
   };
+
+  // MBTIタイプに対応する色を取得する関数
+  const getMBTITypeColor = (type: string): string => {
+    return Theme.colors.mbtiType[type] || Theme.colors.white;
+  };
+
+  // MBTIタイプに対応する画像を取得する関数
+  const getMBTIImage = (type: string) => {
+    return MBTI_TYPE_IMAGES[type] || null;
+  };
   
   // 主要な傾向の変化を分析するヘルパー関数
   const analyzeTrends = (diaries: DiaryAnalysisResponse[]): string => {
@@ -245,7 +275,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Theme.colors.primary} />
+        <ActivityIndicator size="large" color={Theme.colors.white} />
         <Text style={styles.loadingText}>データを読み込み中...</Text>
       </View>
     );
@@ -258,19 +288,64 @@ export default function ProfileScreen() {
       {/* ユーザープロフィール情報表示 */}
       {userProfile && (
         <View style={styles.profileCard}>
-          <Text style={styles.welcomeText}>
-            ようこそ <Text style={styles.username}>{userProfile.username}</Text> さん
-          </Text>
-          <Text style={styles.mbtiText}>
-            あなたの自己申告MBTIタイプ：
-            <Text style={styles.mbtiType}>{userProfile.mbti}</Text>
-          </Text>
-          {currentDimensions.length > 0 && (
-            <Text style={styles.mbtiText}>
-              過去10日間の平均MBTIタイプ：
-              <Text style={styles.mbtiType}>{getMBTIType(currentDimensions)}</Text>
-            </Text>
-          )}
+          <View style={styles.profileHeader}>
+            <View style={styles.profileInfo}>
+              <Text style={styles.welcomeText}>
+                ようこそ <Text style={styles.username}>{userProfile.username}</Text> さん
+              </Text>
+              <View style={styles.mbtiContainer}>
+                <Text style={styles.mbtiText}>
+                  あなたの自己申告MBTIタイプ：
+                  <Text style={[styles.mbtiType, { color: getMBTITypeColor(userProfile.mbti) }]}>
+                    {userProfile.mbti}
+                  </Text>
+                </Text>
+                
+                {/* ハリネズミの画像を表示 */}
+                {getMBTIImage(userProfile.mbti) && (
+                  <View style={[styles.mbtiImageContainer, { borderColor: getMBTITypeColor(userProfile.mbti) }]}>
+                    <Image 
+                      source={getMBTIImage(userProfile.mbti)}
+                      style={styles.mbtiTypeImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                )}
+              </View>
+
+              {currentDimensions.length > 0 && (
+                <View style={styles.avgMbtiContainer}>
+                  <Text style={styles.mbtiText}>
+                    過去10日間の平均MBTIタイプ：
+                    <Text 
+                      style={[
+                        styles.mbtiType, 
+                        { color: getMBTITypeColor(getMBTIType(currentDimensions)) }
+                      ]}
+                    >
+                      {getMBTIType(currentDimensions)}
+                    </Text>
+                  </Text>
+                  
+                  {/* 平均MBTIタイプのハリネズミ画像を表示 */}
+                  {currentDimensions.length > 0 && getMBTIImage(getMBTIType(currentDimensions)) && (
+                    <View 
+                      style={[
+                        styles.mbtiImageContainer, 
+                        { borderColor: getMBTITypeColor(getMBTIType(currentDimensions)) }
+                      ]}
+                    >
+                      <Image 
+                        source={getMBTIImage(getMBTIType(currentDimensions))}
+                        style={styles.mbtiTypeImage}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          </View>
           <Text style={styles.userIdText}>
             ユーザーID：{userProfile.userId}
           </Text>
@@ -346,10 +421,18 @@ const styles = StyleSheet.create({
     color: Theme.colors.textSecondary,
   },
   profileCard: {
-    backgroundColor: Theme.colors.primary + '10',
+    backgroundColor: Theme.colors.card,
     padding: Theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.primary + '30',
+    borderBottomColor: Theme.colors.border,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  profileInfo: {
+    flex: 1,
   },
   welcomeText: {
     fontSize: 16,
@@ -359,17 +442,40 @@ const styles = StyleSheet.create({
   },
   username: {
     fontFamily: 'Inter-Bold',
-    color: Theme.colors.primary,
+    color: Theme.colors.white,
+  },
+  mbtiContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Theme.spacing.xs,
+  },
+  avgMbtiContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Theme.spacing.xs,
   },
   mbtiText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: Theme.colors.textSecondary,
-    marginBottom: Theme.spacing.xs,
+    flex: 1,
   },
   mbtiType: {
     fontFamily: 'Inter-Bold',
-    color: Theme.colors.primary,
+  },
+  mbtiImageContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 2,
+    marginLeft: Theme.spacing.sm,
+  },
+  mbtiTypeImage: {
+    width: '100%',
+    height: '100%',
   },
   userIdText: {
     fontSize: 12,
@@ -378,7 +484,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: Theme.spacing.lg,
-    backgroundColor: Theme.colors.white,
+    backgroundColor: Theme.colors.card,
     borderBottomWidth: 1,
     borderBottomColor: Theme.colors.border,
   },
@@ -398,7 +504,7 @@ const styles = StyleSheet.create({
   },
   timelineSection: {
     padding: Theme.spacing.md,
-    backgroundColor: Theme.colors.white,
+    backgroundColor: Theme.colors.card,
     marginVertical: Theme.spacing.md,
   },
   sectionTitle: {
@@ -421,7 +527,7 @@ const styles = StyleSheet.create({
     padding: Theme.spacing.md,
   },
   insightCard: {
-    backgroundColor: Theme.colors.white,
+    backgroundColor: Theme.colors.card,
     padding: Theme.spacing.md,
     borderRadius: Theme.borderRadius.md,
     ...Theme.shadows.sm,

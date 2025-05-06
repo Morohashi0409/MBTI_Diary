@@ -52,13 +52,13 @@ class DifyAPIService:
     
     def get_growth_advice(self, user_id: str) -> Dict[str, Any]:
         """
-        ユーザーの伸び代情報をDify APIから取得する
+        ユーザーののびしろ情報をDify APIから取得する
         
         Args:
             user_id: ユーザーID
             
         Returns:
-            Dict[str, Any]: 伸び代アドバイス情報を含む辞書
+            Dict[str, Any]: のびしろアドバイス情報を含む辞書
         """
         try:
             # Dify workflows/run エンドポイントを使用
@@ -86,7 +86,7 @@ class DifyAPIService:
             }
             
         except Exception as e:
-            logger.error(f"Dify API伸び代情報取得中にエラーが発生しました: {str(e)}")
+            logger.error(f"Dify APIのびしろ情報取得中にエラーが発生しました: {str(e)}")
             # エラー時はデフォルト値を返す
             return {
                 "advice": [
@@ -120,7 +120,7 @@ class DifyAPIService:
         # 分析リクエストの場合はコンテンツを追加
         if request_type == "analysis":
             inputs["text"] = content
-        # 伸び代リクエストの場合はuser_idを追加
+        # のびしろリクエストの場合はuser_idを追加
         elif request_type == "growth":
             inputs["user_id"] = user_id
         
@@ -166,7 +166,7 @@ class DifyAPIService:
                     "summary": summary
                 }
             elif request_type == "growth":
-                # 伸び代リクエストの場合
+                # のびしろリクエストの場合
                 message1 = outputs.get("message1", "内向的な特性を活かす")
                 content1 = outputs.get("content1", "深い思考と自己理解を大切にしながら、時には小さな社交の機会も取り入れてみましょう。")
                 message2 = outputs.get("message2", "直感力の向上")
@@ -174,7 +174,7 @@ class DifyAPIService:
                 message3 = outputs.get("message3", "バランスの取れた判断")
                 content3 = outputs.get("content3", "論理的思考と感情的な理解のバランスを意識することで、より良い決断ができるようになります。")
                 
-                logger.debug(f"伸び代情報取得成功: {message1}, {message2}, {message3}")
+                logger.debug(f"のびしろ情報取得成功: {message1}, {message2}, {message3}")
                 
                 # 結果を返す
                 return {

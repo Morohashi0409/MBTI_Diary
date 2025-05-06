@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Reanimated, { 
   useAnimatedStyle, 
@@ -13,14 +13,19 @@ import { Theme } from '@/constants/theme';
 
 type LoadingIndicatorProps = {
   text?: string;
+  colorScheme?: 'EI' | 'SN' | 'TF' | 'JP';
 };
 
 const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({ 
-  text = '日記を分析中...'
+  text = '日記を分析中...',
+  colorScheme = 'JP' // デフォルトはJP（紫色: #88619a）
 }) => {
   const dot1Opacity = useSharedValue(0.3);
   const dot2Opacity = useSharedValue(0.3);
   const dot3Opacity = useSharedValue(0.3);
+  
+  // 選択された色スキームに基づいてアクセントカラーを取得
+  const accentColor = Theme.colors.mbti[colorScheme];
   
   const dot1Style = useAnimatedStyle(() => ({
     opacity: dot1Opacity.value
@@ -79,11 +84,11 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>{text}</Text>
+      <Text style={[styles.text, { color: accentColor }]}>{text}</Text>
       <View style={styles.dotsContainer}>
-        <Reanimated.View style={[styles.dot, dot1Style]} />
-        <Reanimated.View style={[styles.dot, dot2Style]} />
-        <Reanimated.View style={[styles.dot, dot3Style]} />
+        <Reanimated.View style={[styles.dot, dot1Style, { backgroundColor: accentColor }]} />
+        <Reanimated.View style={[styles.dot, dot2Style, { backgroundColor: accentColor }]} />
+        <Reanimated.View style={[styles.dot, dot3Style, { backgroundColor: accentColor }]} />
       </View>
     </View>
   );
@@ -95,11 +100,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Theme.spacing.md,
+    backgroundColor: Theme.colors.card,
+    borderRadius: Theme.borderRadius.md,
+    ...Theme.shadows.sm,
   },
   text: {
     fontSize: 16,
     fontFamily: 'Inter-Medium',
-    color: Theme.colors.primary,
+    color: Theme.colors.text,
     marginRight: Theme.spacing.sm,
   },
   dotsContainer: {
@@ -110,7 +118,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Theme.colors.primary,
     margin: 2,
   },
 });

@@ -6,30 +6,31 @@ import {
   TouchableOpacity, 
   Text,
   Keyboard,
-  Animated,
-  Platform,
 } from 'react-native';
 import { SendHorizontal } from 'lucide-react-native';
 import { Theme } from '@/constants/theme';
-import { apiClient } from '@/services/apiClient';
-import { getUserProfile } from '@/services/userStorage';
 import Reanimated, { 
   useAnimatedStyle, 
   useSharedValue, 
   withTiming, 
   withSequence,
-  withDelay,
-  Easing 
 } from 'react-native-reanimated';
 
 type DiaryInputProps = {
   onSubmit: (text: string) => void;
   isLoading: boolean;
+  colorScheme?: 'EI' | 'SN' | 'TF' | 'JP';
 };
 
-const DiaryInput: React.FC<DiaryInputProps> = ({ onSubmit, isLoading }) => {
+const DiaryInput: React.FC<DiaryInputProps> = ({ 
+  onSubmit, 
+  isLoading, 
+  colorScheme = 'JP' 
+}) => {
   const [text, setText] = useState('');
   const scale = useSharedValue(1);
+  
+  const accentColor = Theme.colors.mbti[colorScheme];
   
   const animatedButtonStyle = useAnimatedStyle(() => {
     return {
@@ -46,9 +47,6 @@ const DiaryInput: React.FC<DiaryInputProps> = ({ onSubmit, isLoading }) => {
     );
     
     Keyboard.dismiss();
-    
-    // 親コンポーネント側のフックで処理されるため、ここでは直接APIは呼び出さず
-    // onSubmitで親に通知するだけにします
     onSubmit(text.trim());
   };
 
@@ -57,7 +55,10 @@ const DiaryInput: React.FC<DiaryInputProps> = ({ onSubmit, isLoading }) => {
   return (
     <View style={styles.container}>
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          { borderColor: text.length > 0 ? accentColor : Theme.colors.border }
+        ]}
         value={text}
         onChangeText={setText}
         placeholder={placeholderText}
@@ -71,6 +72,7 @@ const DiaryInput: React.FC<DiaryInputProps> = ({ onSubmit, isLoading }) => {
         <TouchableOpacity
           style={[
             styles.submitButton,
+            { backgroundColor: Theme.colors.white },
             (text.trim().length === 0 || isLoading) && styles.disabledButton
           ]}
           onPress={handleSubmit}
@@ -80,12 +82,16 @@ const DiaryInput: React.FC<DiaryInputProps> = ({ onSubmit, isLoading }) => {
             size={24} 
             color={text.trim().length === 0 || isLoading 
               ? Theme.colors.textTertiary 
-              : Theme.colors.white
+              : Theme.colors.card
             } 
           />
         </TouchableOpacity>
       </Reanimated.View>
-      <Text style={styles.characterCount}>
+      <Text style={[
+        styles.characterCount,
+        text.length > 900 && { color: Theme.colors.warning },
+        text.length > 950 && { color: Theme.colors.error }
+      ]}>
         {text.length}/1000
       </Text>
     </View>
@@ -103,12 +109,11 @@ const styles = StyleSheet.create({
     minHeight: 180,
     maxHeight: 300,
     borderWidth: 1,
-    borderColor: Theme.colors.border,
     borderRadius: Theme.borderRadius.md,
     paddingHorizontal: Theme.spacing.md,
     paddingVertical: Theme.spacing.md,
     paddingBottom: Theme.spacing.lg,
-    backgroundColor: Theme.colors.white,
+    backgroundColor: Theme.colors.card,
     color: Theme.colors.text,
     fontFamily: 'Inter-Regular',
     fontSize: 16,
@@ -121,7 +126,6 @@ const styles = StyleSheet.create({
     right: Theme.spacing.md,
   },
   submitButton: {
-    backgroundColor: Theme.colors.primary,
     width: 44,
     height: 44,
     borderRadius: Theme.borderRadius.round,
@@ -130,7 +134,7 @@ const styles = StyleSheet.create({
     ...Theme.shadows.sm,
   },
   disabledButton: {
-    backgroundColor: Theme.colors.disabled,
+    opacity: 0.5,
   },
   characterCount: {
     position: 'absolute',

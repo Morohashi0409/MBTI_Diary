@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 16,
     fontFamily: 'Inter-Medium',
-    color: Theme.colors.primaryDark,
+    color: Theme.colors.white,
     marginBottom: Theme.spacing.xs,
   },
   summaryText: {
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   feedbackTitle: {
     fontSize: 16,
     fontFamily: 'Inter-Medium',
-    color: Theme.colors.secondaryDark,
+    color: Theme.colors.white,
     marginBottom: Theme.spacing.xs,
   },
   feedbackText: {

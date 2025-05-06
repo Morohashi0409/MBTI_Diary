@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar } from 'react-native';
 import { Theme } from '@/constants/theme';
 import { Sparkles, Target, CircleArrowUp as ArrowUpCircle } from 'lucide-react-native';
 import { apiClient, GrowthAdvice } from '@/services/apiClient';
@@ -19,11 +19,11 @@ export default function GrowthScreen() {
   const [error, setError] = useState<string | null>(null);
   const [adviceData, setAdviceData] = useState<GrowthAdvice[]>([]);
   
-  // 伸び代情報の取得
+  // のびしろ情報の取得
   useEffect(() => {
     const fetchGrowthAdvice = async () => {
       try {
-        console.log('伸び代情報の取得を開始します');
+        console.log('のびしろ情報の取得を開始します');
         setLoading(true);
         setError(null);
         
@@ -38,18 +38,18 @@ export default function GrowthScreen() {
           return;
         }
         
-        // 伸び代情報の取得
+        // のびしろ情報の取得
         console.log('APIリクエスト開始:', `/diary/user/growth/${userId}`);
         const response = await apiClient.getGrowthAdvice(userId);
         console.log('APIレスポンス:', response);
         setAdviceData(response.advice);
         
       } catch (err) {
-        console.error('伸び代情報取得エラー:', err);
-        setError('伸び代情報の取得に失敗しました。もう一度お試しください。');
+        console.error('のびしろ情報取得エラー:', err);
+        setError('のびしろ情報の取得に失敗しました。もう一度お試しください。');
       } finally {
         setLoading(false);
-        console.log('伸び代情報取得処理完了');
+        console.log('のびしろ情報取得処理完了');
       }
     };
     
@@ -74,37 +74,62 @@ export default function GrowthScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <LoadingIndicator message="伸び代情報を取得中..." />
+        <LoadingIndicator message="のびしろ情報を取得中..." />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>あなたの個性をさらに活かすためのヒント</Text>
-        <Text style={styles.subtitle}>
-          日記の分析から導き出された、あなたの成長のためのアドバイス
-        </Text>
-      </View>
+    <View style={styles.container}>
+      <StatusBar backgroundColor={Theme.colors.card} barStyle="light-content" />
+      
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>あなたの個性を活かす</Text>
+          <Text style={styles.subtitle}>
+            日記の分析から導き出された成長のためのアドバイス
+          </Text>
+        </View>
 
-      <View style={styles.adviceSection}>
-        {adviceData.map((item) => {
-          // アイコンのマッピング（デフォルトはSparkles）
-          const IconComponent = iconMap[item.id as keyof typeof iconMap] || Sparkles;
-          
-          return (
-            <View key={item.id} style={styles.adviceCard}>
-              <View style={styles.adviceHeader}>
-                <IconComponent size={24} color={Theme.colors.primary} />
-                <Text style={styles.adviceTitle}>{item.title}</Text>
+        <View style={styles.adviceSection}>
+          {adviceData.map((item) => {
+            // アイコンのマッピング（デフォルトはSparkles）
+            const IconComponent = iconMap[item.id as keyof typeof iconMap] || Sparkles;
+            
+            // アイコンの色を設定（MBTIの色を使用）
+            let iconColor;
+            switch (item.id % 4) {
+              case 0:
+                iconColor = Theme.colors.mbti.JP; // 紫色
+                break;
+              case 1:
+                iconColor = Theme.colors.mbti.EI; // 青色
+                break;
+              case 2:
+                iconColor = Theme.colors.mbti.SN; // 黄色
+                break;
+              case 3:
+                iconColor = Theme.colors.mbti.TF; // 緑色
+                break;
+              default:
+                iconColor = Theme.colors.mbti.JP; // デフォルトは紫色
+            }
+            
+            return (
+              <View key={item.id} style={styles.adviceCard}>
+                <View style={styles.adviceHeader}>
+                  <View style={styles.iconContainer}>
+                    <IconComponent size={24} color={iconColor} />
+                  </View>
+                  <Text style={styles.adviceTitle}>{item.title}</Text>
+                </View>
+                <Text style={styles.adviceText}>{item.description}</Text>
               </View>
-              <Text style={styles.adviceText}>{item.description}</Text>
-            </View>
-          );
-        })}
-      </View>
-    </ScrollView>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -117,9 +142,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  scrollContent: {
+    paddingBottom: Theme.spacing.md,
+  },
   header: {
     padding: Theme.spacing.lg,
-    backgroundColor: Theme.colors.white,
+    backgroundColor: Theme.colors.card,
     borderBottomWidth: 1,
     borderBottomColor: Theme.colors.border,
   },
@@ -138,7 +166,7 @@ const styles = StyleSheet.create({
     padding: Theme.spacing.md,
   },
   adviceCard: {
-    backgroundColor: Theme.colors.white,
+    backgroundColor: Theme.colors.card,
     padding: Theme.spacing.lg,
     borderRadius: Theme.borderRadius.md,
     marginBottom: Theme.spacing.md,
@@ -149,11 +177,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Theme.spacing.sm,
   },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Theme.colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Theme.spacing.sm,
+  },
   adviceTitle: {
     fontSize: 18,
     fontFamily: 'Inter-Bold',
     color: Theme.colors.text,
-    marginLeft: Theme.spacing.sm,
   },
   adviceText: {
     fontSize: 14,

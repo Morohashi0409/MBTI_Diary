@@ -61,11 +61,17 @@ export default function RootLayout() {
         screenOptions={{ 
           headerShown: true,
           headerStyle: {
-            backgroundColor: Theme.colors.primary,
+            backgroundColor: Theme.colors.card,
+            shadowColor: Theme.colors.black,
+            shadowOpacity: 0.2,
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 2,
+            elevation: 3,
           },
-          headerTintColor: Theme.colors.white,
+          headerTintColor: Theme.colors.text,
           headerTitleStyle: {
             fontFamily: 'Inter-Medium',
+            color: Theme.colors.text,
           },
           contentStyle: {
             backgroundColor: Theme.colors.background,
@@ -86,7 +92,7 @@ export default function RootLayout() {
           }} 
         />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
       
       {/* ユーザー登録モーダル */}
       <UserRegistrationModal 
