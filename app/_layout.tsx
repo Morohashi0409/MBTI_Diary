@@ -7,7 +7,7 @@ import { useFonts, Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@exp
 import { Theme } from '@/constants/theme';
 import { View } from 'react-native';
 import UserRegistrationModal from '@/components/UserRegistrationModal';
-import { isUserRegistered } from '@/services/userStorage';
+import { isUserRegistered, getMBTIProfile } from '@/services/userStorage';
 import { onAuthStateChange, getCurrentUser } from '@/services/firebaseService';
 import { User } from 'firebase/auth';
 
@@ -27,9 +27,51 @@ export default function RootLayout() {
   const [showRegistration, setShowRegistration] = useState<boolean>(false);
   const [isCheckingUser, setIsCheckingUser] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [hasCheckedInitialAuth, setHasCheckedInitialAuth] = useState<boolean>(false);
 
-  // Firebase認証状態を監視
+  // アプリ起動時の初期認証状態チェック
   useEffect(() => {
+    const checkInitialAuthState = async () => {
+      try {
+        // 現在のFirebaseユーザーを取得
+        const user = getCurrentUser();
+        
+        if (user) {
+          console.log('アプリ起動時: すでにログイン済みのユーザー検出', user.email);
+          setCurrentUser(user);
+          
+          // MBTIプロファイル情報の存在確認
+          const registered = await isUserRegistered();
+          if (registered) {
+            // すでにログイン済みかつプロファイル登録済み → 登録モーダル非表示
+            console.log('アプリ起動時: ユーザー登録済み、登録モーダルをスキップします');
+            setShowRegistration(false);
+          } else {
+            // ログイン済みだがプロファイル未登録 → 登録モーダル表示
+            console.log('アプリ起動時: Firebaseログイン済みだがプロファイル未登録');
+            setShowRegistration(true);
+          }
+        } else {
+          // 未ログイン → 登録モーダル表示
+          console.log('アプリ起動時: ログインユーザーなし、登録モーダルを表示します');
+          setShowRegistration(true);
+        }
+      } catch (error) {
+        console.error('初期認証状態確認エラー:', error);
+        setShowRegistration(true);
+      } finally {
+        setIsCheckingUser(false);
+        setHasCheckedInitialAuth(true);
+      }
+    };
+
+    checkInitialAuthState();
+  }, []);
+
+  // Firebase認証状態を監視（初期チェック後のみ実行）
+  useEffect(() => {
+    if (!hasCheckedInitialAuth) return;
+    
     const unsubscribe = onAuthStateChange((user) => {
       console.log('認証状態が変更されました:', user ? `ユーザー: ${user.email}` : 'サインアウト');
       setCurrentUser(user);
@@ -46,12 +88,15 @@ export default function RootLayout() {
     
     // クリーンアップ関数
     return () => unsubscribe();
-  }, []);
+  }, [hasCheckedInitialAuth]);
 
   // MBTIプロファイル情報が登録済みかチェック
   const checkUserRegistration = async () => {
     try {
       const registered = await isUserRegistered();
+      console.log('ユーザー登録チェック結果:', registered ? '登録済み' : '未登録');
+      
+      // 登録済みなら登録モーダルを表示しない
       setShowRegistration(!registered);
     } catch (error) {
       console.error('ユーザー登録チェックエラー:', error);
