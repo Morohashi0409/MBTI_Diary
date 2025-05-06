@@ -1,13 +1,14 @@
 import Constants from 'expo-constants';
+import { getAuthToken } from './firebaseService';
 
 export type DiaryEntryParams = {
   content: string;
-  userId: string;
 };
 
 export type RegisterUserParams = {
   username: string;
   mbti: string;
+  firebaseUid: string;
 };
 
 export type RegisterUserResponse = {
@@ -44,24 +45,43 @@ class ApiClient {
   private baseUrl: string;
 
   constructor() {
-    // 本番のバックエンドURLを使用
-    // this.baseUrl = 'https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1';
-
-    // ローカル開発用のバックエンドURLを使用
-    this.baseUrl = 'http://0.0.0.0:8000/api/v1';
+    // 環境に応じてAPIエンドポイントを選択
+    if (__DEV__) {
+      // 開発環境用
+      // this.baseUrl = 'http://0.0.0.0:8000/api/v1';
+      
+      // 本番環境のエンドポイントを開発中も使用することでFirebase認証の問題を解決
+      this.baseUrl = 'https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1';
+    } else {
+      // 本番環境用
+      this.baseUrl = 'https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1';
+    }
     
     console.log('APIクライアント初期化 - ベースURL:', this.baseUrl);
   }
 
+  // 認証ヘッダーを生成する内部メソッド
+  private async getAuthHeaders(): Promise<HeadersInit> {
+    const token = await getAuthToken();
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
+  }
+
   async analyzeAndSaveDiary(params: DiaryEntryParams): Promise<DiaryAnalysisResponse> {
     try {
-      const url = `${this.baseUrl}/diary/analyze-and-save?user_id=${params.userId}`;
+      const headers = await this.getAuthHeaders();
+      const url = `${this.baseUrl}/diary/analyze-and-save`;
       
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ content: params.content }),
       });
       
@@ -79,11 +99,10 @@ class ApiClient {
 
   async createUserAccount(params: RegisterUserParams): Promise<RegisterUserResponse> {
     try {
+      const headers = await this.getAuthHeaders();
       const response = await fetch(`${this.baseUrl}/users/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(params),
       });
       
@@ -100,9 +119,12 @@ class ApiClient {
   }
   
   // 日記の履歴を取得するメソッド
-  async getUserDiaries(userId: string, limit: number = 10): Promise<DiaryAnalysisResponse[]> {
+  async getUserDiaries(limit: number = 10): Promise<DiaryAnalysisResponse[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/diary/user/${userId}?limit=${limit}`);
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseUrl}/diary/user?limit=${limit}`, {
+        headers
+      });
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -116,11 +138,13 @@ class ApiClient {
     }
   }
 
-  //のびしろ 情報を取得するメソッド - ローカル環境用のパス
-  async getGrowthAdvice(userId: string): Promise<GrowthAdviceResponse> {
+  // のびしろ情報を取得するメソッド
+  async getGrowthAdvice(): Promise<GrowthAdviceResponse> {
     try {
-      // ローカル環境のgrowthエンドポイントを使用
-      const response = await fetch(`${this.baseUrl}/growth/${userId}`);
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseUrl}/diary/user/growth`, {
+        headers
+      });
       
       if (!response.ok) {
         const errorData = await response.json();

@@ -215,11 +215,16 @@ export default function AnalysisDetailScreen() {
           </Text>
           {analysis && (
             <TouchableOpacity 
-              style={styles.shareButton}
+              style={[
+                styles.shareButton,
+                { 
+                  backgroundColor: getMBTITypeColor(getMBTIType(analysis.dimensions)) + '20',
+                }
+              ]}
               onPress={handleShare}
             >
-              <Share2 size={18} color={Theme.colors.primary} />
-              <Text style={styles.shareText}>共有</Text>
+              <Share2 size={18} color={getMBTITypeColor(getMBTIType(analysis.dimensions))} />
+              <Text style={[styles.shareText, { color: getMBTITypeColor(getMBTIType(analysis.dimensions)) }]}>共有</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -238,7 +243,10 @@ export default function AnalysisDetailScreen() {
         <>
           {/* パーソナリティタイプ表示 */}
           {analysis && (
-            <View style={styles.personalityTypeContainer}>
+            <View style={[
+              styles.personalityTypeContainer,
+              { backgroundColor: getMBTITypeColor(getMBTIType(analysis.dimensions)) + '15' }
+            ]}>
               <View style={styles.personalityTypeHeader}>
                 <View style={styles.typeTextContainer}>
                   <Text style={styles.personalityTypeLabel}>
@@ -380,7 +388,6 @@ const styles = StyleSheet.create({
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Theme.colors.primary + '20',
     paddingHorizontal: Theme.spacing.md,
     paddingVertical: Theme.spacing.xs,
     borderRadius: Theme.borderRadius.round,
@@ -389,10 +396,8 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: Theme.colors.primary,
   },
   personalityTypeContainer: {
-    backgroundColor: Theme.colors.primary + '15',
     padding: Theme.spacing.md,
     borderRadius: Theme.borderRadius.lg,
     marginBottom: Theme.spacing.lg,

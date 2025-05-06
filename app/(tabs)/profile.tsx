@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  ActivityIndicator, 
+  Image, 
+  TouchableOpacity, 
+  Alert 
+} from 'react-native';
 import { Theme } from '@/constants/theme';
 import { LineChart } from '@/components/LineChart';
 import MBTIScoreCard from '@/components/MBTIScoreCard';
-import { getUserProfile, UserProfile } from '@/services/userStorage';
+import { getUserProfile, clearMBTIProfile } from '@/services/userStorage';
 import { apiClient, DiaryAnalysisResponse } from '@/services/apiClient';
 import ErrorMessage from '@/components/ErrorMessage';
+import { getCurrentUser, signOut } from '@/services/firebaseService';
+import { LogOut } from 'lucide-react-native';
 
 // MBTI次元のデータ型
 type MBTIDimension = {
@@ -235,6 +246,36 @@ export default function ProfileScreen() {
     return report;
   };
 
+  // ログアウト処理
+  const handleLogout = () => {
+    Alert.alert(
+      'ログアウト確認',
+      'ログアウトしますか？',
+      [
+        {
+          text: 'キャンセル',
+          style: 'cancel',
+        },
+        {
+          text: 'ログアウト',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // ローカルのMBTIプロファイル情報をクリア
+              await clearMBTIProfile();
+              // Firebase認証からログアウト
+              await signOut();
+            } catch (error) {
+              console.error('ログアウトエラー:', error);
+              Alert.alert('エラー', 'ログアウトに失敗しました。もう一度お試しください。');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   // コンポーネントがマウントされたときにユーザープロフィールと日記データを取得
   useEffect(() => {
     const fetchData = async () => {
@@ -290,9 +331,18 @@ export default function ProfileScreen() {
         <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
             <View style={styles.profileInfo}>
-              <Text style={styles.welcomeText}>
-                ようこそ <Text style={styles.username}>{userProfile.username}</Text> さん
-              </Text>
+              <View style={styles.userHeaderRow}>
+                <Text style={styles.welcomeText}>
+                  ようこそ <Text style={styles.username}>{userProfile.username}</Text> さん
+                </Text>
+                <TouchableOpacity 
+                  style={styles.logoutButton}
+                  onPress={handleLogout}
+                >
+                  <LogOut size={16} color={Theme.colors.error} />
+                  <Text style={styles.logoutText}>ログアウト</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.mbtiContainer}>
                 <Text style={styles.mbtiText}>
                   あなたの自己申告MBTIタイプ：
@@ -312,6 +362,21 @@ export default function ProfileScreen() {
                   </View>
                 )}
               </View>
+
+              {/* Firebase認証情報の表示 */}
+              {getCurrentUser() && (
+                <View style={styles.firebaseAuthInfo}>
+                  <Text style={styles.emailText}>
+                    認証メール: {getCurrentUser()?.email}
+                  </Text>
+                  {getCurrentUser()?.photoURL && (
+                    <Image 
+                      source={{ uri: getCurrentUser()?.photoURL }} 
+                      style={styles.authAvatar}
+                    />
+                  )}
+                </View>
+              )}
 
               {currentDimensions.length > 0 && (
                 <View style={styles.avgMbtiContainer}>
@@ -434,6 +499,26 @@ const styles = StyleSheet.create({
   profileInfo: {
     flex: 1,
   },
+  userHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.xs,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Theme.colors.error + '10',
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.sm,
+  },
+  logoutText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: Theme.colors.error,
+    marginLeft: Theme.spacing.xs,
+  },
   welcomeText: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
@@ -476,6 +561,28 @@ const styles = StyleSheet.create({
   mbtiTypeImage: {
     width: '100%',
     height: '100%',
+  },
+  firebaseAuthInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Theme.colors.card + '80',
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.sm,
+    marginBottom: Theme.spacing.sm,
+  },
+  emailText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: Theme.colors.textSecondary,
+    flex: 1,
+  },
+  authAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginLeft: Theme.spacing.sm,
   },
   userIdText: {
     fontSize: 12,

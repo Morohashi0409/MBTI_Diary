@@ -27,6 +27,8 @@ const DiaryItem: React.FC<DiaryItemProps> = ({ diary, onPress }) => {
   const getMBTIType = (dimensions: DiaryAnalysisResponse['dimensions']) => {
     if (!dimensions) return '不明';
     
+    // APIからのレスポンスでは、スコアが高いほど第2の文字（I,N,F,P）に近い
+    // つまり EI=70 なら I型、EI=30 なら E型となる
     const type = [
       dimensions.EI < 50 ? 'E' : 'I',
       dimensions.SN < 50 ? 'S' : 'N',
@@ -269,7 +271,6 @@ const styles = StyleSheet.create({
     color: Theme.colors.textSecondary,
   },
   mbtiTypeContainer: {
-    backgroundColor: Theme.colors.primary + '20',
     paddingHorizontal: Theme.spacing.sm,
     paddingVertical: Theme.spacing.xs / 2,
     borderRadius: Theme.borderRadius.round,
@@ -277,7 +278,6 @@ const styles = StyleSheet.create({
   mbtiType: {
     fontSize: 14,
     fontFamily: 'Inter-Bold',
-    color: Theme.colors.primary,
   },
   diaryContent: {
     fontSize: 15,
@@ -333,15 +333,16 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   writeDiaryButton: {
-    backgroundColor: Theme.colors.primary,
+    backgroundColor: Theme.colors.card, // 背景色をグレー(Theme.colors.card)に変更
     paddingHorizontal: Theme.spacing.lg,
     paddingVertical: Theme.spacing.md,
     borderRadius: Theme.borderRadius.round,
-    ...Theme.shadows.md,
+    borderWidth: 1, // 枠線を追加
+    borderColor: Theme.colors.white, // 枠線の色を白に設定
   },
   writeDiaryButtonText: {
     fontSize: 16,
     fontFamily: 'Inter-Medium',
-    color: Theme.colors.white,
+    color: Theme.colors.text, // テキストの色を通常のテキスト色に変更
   },
 });

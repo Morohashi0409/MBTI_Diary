@@ -8,6 +8,8 @@ import { Theme } from '@/constants/theme';
 import { View } from 'react-native';
 import UserRegistrationModal from '@/components/UserRegistrationModal';
 import { isUserRegistered } from '@/services/userStorage';
+import { onAuthStateChange, getCurrentUser } from '@/services/firebaseService';
+import { User } from 'firebase/auth';
 
 // Keep the splash screen visible until fonts are loaded
 SplashScreen.preventAutoHideAsync();
@@ -24,22 +26,39 @@ export default function RootLayout() {
   // ユーザー登録状態の管理
   const [showRegistration, setShowRegistration] = useState<boolean>(false);
   const [isCheckingUser, setIsCheckingUser] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // アプリ起動時にユーザー登録状態をチェック
+  // Firebase認証状態を監視
   useEffect(() => {
-    const checkUserRegistration = async () => {
-      try {
-        const registered = await isUserRegistered();
-        setShowRegistration(!registered);
-      } catch (error) {
-        console.error('ユーザー登録チェックエラー:', error);
-      } finally {
+    const unsubscribe = onAuthStateChange((user) => {
+      console.log('認証状態が変更されました:', user ? `ユーザー: ${user.email}` : 'サインアウト');
+      setCurrentUser(user);
+      
+      // すでにFirebase認証されていれば、MBTIプロファイル情報のチェックを行う
+      if (user) {
+        checkUserRegistration();
+      } else {
+        // 認証されていない場合は登録画面を表示
+        setShowRegistration(true);
         setIsCheckingUser(false);
       }
-    };
-
-    checkUserRegistration();
+    });
+    
+    // クリーンアップ関数
+    return () => unsubscribe();
   }, []);
+
+  // MBTIプロファイル情報が登録済みかチェック
+  const checkUserRegistration = async () => {
+    try {
+      const registered = await isUserRegistered();
+      setShowRegistration(!registered);
+    } catch (error) {
+      console.error('ユーザー登録チェックエラー:', error);
+    } finally {
+      setIsCheckingUser(false);
+    }
+  };
 
   const onLayoutRootView = useCallback(async () => {
     if ((fontsLoaded || fontError) && !isCheckingUser) {
@@ -94,7 +113,7 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style="light" />
       
-      {/* ユーザー登録モーダル */}
+      {/* ユーザー登録モーダル - Firebase認証済みかつプロファイル未登録の場合のみ表示 */}
       <UserRegistrationModal 
         visible={showRegistration} 
         onComplete={() => setShowRegistration(false)} 

@@ -10,7 +10,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    pass
+    firebase_uid: str  # Firebase認証によるユーザーID
 
 
 class UserResponse(UserBase):
@@ -20,6 +20,7 @@ class UserResponse(UserBase):
 
 class User(UserBase):
     id: str
+    firebase_uid: str  # Firebase認証によるユーザーID
     created_at: datetime
     
     @classmethod
@@ -29,5 +30,6 @@ class User(UserBase):
             id=str(uuid4()),
             username=user_create.username,
             mbti=user_create.mbti,
+            firebase_uid=user_create.firebase_uid,
             created_at=datetime.now()
         )
