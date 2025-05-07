@@ -57,6 +57,7 @@ def test_dify_connection():
         else:  # workflows/run
             payload = {
                 "inputs": {
+                    "type": "analysis",  # このtypeパラメータが必須
                     "text": test_text
                 },
                 "response_mode": "blocking",

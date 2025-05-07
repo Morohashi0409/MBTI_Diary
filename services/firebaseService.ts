@@ -85,6 +85,12 @@ export const signInWithGoogle = async (): Promise<User | null> => {
     throw new Error('認証サービスが利用できません');
   }
 
+  // 既にログインしているかチェック
+  if (auth.currentUser) {
+    console.log('既にログイン済みのユーザーです:', auth.currentUser.email);
+    return auth.currentUser;
+  }
+
   try {
     console.log('プラットフォーム:', Platform.OS);
 
@@ -170,9 +176,47 @@ export const signInWithGoogle = async (): Promise<User | null> => {
 };
 
 /**
+ * 現在のユーザーを取得する関数（非同期版）
+ */
+export const getCurrentUserAsync = (): Promise<User | null> => {
+  console.log('getCurrentUserAsync関数が呼び出されました');
+  return new Promise((resolve) => {
+    if (!auth) {
+      console.warn('認証インスタンスが初期化されていません');
+      resolve(null);
+      return;
+    }
+
+    // 現在のユーザーが既に取得できる場合は直ちに返す
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      console.log('現在のユーザーが既に利用可能:', currentUser.email);
+      resolve(currentUser);
+      return;
+    }
+
+    // ユーザーがまだ読み込まれていない場合は、一時的にステータス変更リスナーを設定
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('認証状態変更により取得したユーザー:', user ? user.email : 'なし');
+      unsubscribe(); // リスナーを解除
+      resolve(user);
+    });
+  });
+};
+
+/**
  * 現在のユーザーを取得する関数
+ * 注意: 非同期的な初期化の問題により、この関数はアプリ起動直後には正しい値を返さない場合があります
+ * 確実にユーザー情報を取得するには getCurrentUserAsync() を使用してください
  */
 export const getCurrentUser = (): User | null => {
+  console.log('getCurrentUser関数が呼び出されました');
+  console.log(auth);
+  if (auth?.currentUser) {
+    console.log('現在のユーザー情報:', auth.currentUser.email);
+  } else {
+    console.log('ユーザー情報はまだ読み込まれていません');
+  }
   return auth ? auth.currentUser : null;
 };
 
@@ -191,7 +235,8 @@ export const onAuthStateChange = (callback: (user: User | null) => void): (() =>
  * ユーザーの認証トークンを取得する関数
  */
 export const getAuthToken = async (): Promise<string | null> => {
-  const user = getCurrentUser();
+  const user = await getCurrentUserAsync();
+  console.log('現在のユーザー:', user ? user.email : 'なし');
   if (!user) return null;
   
   try {

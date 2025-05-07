@@ -3,19 +3,22 @@ import logging
 import json
 from typing import Dict, Any, List
 import uuid
+from datetime import datetime, timedelta
+from firebase_admin import firestore
 
 logger = logging.getLogger(__name__)
 
 class DifyAPIService:
     """Dify APIとの連携を行うサービスクラス"""
     
-    def __init__(self, api_key: str = "app-tfRmkpyv8gsTxJFpH9gOGR2H"):
+    def __init__(self, api_key: str = "app-tfRmkpyv8gsTxJFpH9gOGR2H", db=None):
         self.api_key = api_key
         self.base_url = "https://api.dify.ai/v1"
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
+        self.db = db  # Firestoreクライアントを保持
         logger.info(f"Dify API初期化完了: ワークフローAPIを使用")
     
     def analyze_diary(self, content: str) -> Dict[str, Any]:
@@ -61,8 +64,11 @@ class DifyAPIService:
             Dict[str, Any]: のびしろアドバイス情報を含む辞書
         """
         try:
+            # 日記データを取得して整形する
+            diary_history = self._format_diary_history(user_id)
+            
             # Dify workflows/run エンドポイントを使用
-            result = self._call_workflow_endpoint("", user_id, "growth")
+            result = self._call_workflow_endpoint("", user_id, "growth", history=diary_history)
             
             # レスポンスの変換処理
             return {
@@ -108,7 +114,91 @@ class DifyAPIService:
                 ]
             }
     
-    def _call_workflow_endpoint(self, content: str, user_id: str, request_type: str = "analysis") -> Dict[str, Any]:
+    def _format_diary_history(self, user_id: str) -> str:
+        """
+        ユーザーの日記データを取得してAIが読み取りやすいフォーマットに変換する
+        
+        Args:
+            user_id: ユーザーID
+            
+        Returns:
+            str: フォーマット済みの日記履歴テキスト
+        """
+        try:
+            # データベースの参照を取得
+            from app.database import db
+            
+            # 日記データを取得（作成日時の降順）
+            diary_docs = db.collection('diaries')\
+                .where('user_id', '==', user_id)\
+                .order_by('created_at', direction='DESCENDING')\
+                .limit(10)\
+                .stream()
+            
+            diaries = []
+            for doc in diary_docs:
+                diary_data = doc.to_dict()
+                # 必須フィールドの存在確認
+                if all(field in diary_data for field in ['content', 'dimensions', 'feedback', 'summary']):
+                    # created_atがタイムスタンプの場合は変換
+                    created_at = diary_data.get('created_at')
+                    if hasattr(created_at, 'timestamp'):
+                        created_at = datetime.fromtimestamp(created_at.timestamp())
+                    elif isinstance(created_at, (int, float)):
+                        created_at = datetime.fromtimestamp(created_at)
+                    else:
+                        created_at = datetime.now()  # デフォルト値
+                    
+                    # 日記データを整形
+                    diary_entry = {
+                        "content": diary_data.get('content', ''),
+                        "dimensions": diary_data.get('dimensions', {}),
+                        "feedback": diary_data.get('feedback', ''),
+                        "summary": diary_data.get('summary', ''),
+                        "created_at": created_at
+                    }
+                    diaries.append(diary_entry)
+            
+            # フォーマット済みテキストを生成
+            if not diaries:
+                return "過去の日記データはありません。"
+            
+            formatted_text = "【ユーザーの過去の日記データ】\n\n"
+            
+            for i, diary in enumerate(diaries):
+                created_at = diary.get('created_at', datetime.now()).strftime('%Y-%m-%d')
+                content = diary.get('content', '')
+                dimensions = diary.get('dimensions', {})
+                feedback = diary.get('feedback', '')
+                summary = diary.get('summary', '')
+                
+                # MBTI次元スコアを取得
+                ei_score = dimensions.get('EI', 50)
+                sn_score = dimensions.get('SN', 50)
+                tf_score = dimensions.get('TF', 50)
+                jp_score = dimensions.get('JP', 50)
+                
+                # 日記エントリーをフォーマット
+                entry = f"【日記 {i+1}】{created_at}\n"
+                entry += f"内容: {content}\n"
+                entry += f"MBTI分析: E-I={ei_score}, S-N={sn_score}, T-F={tf_score}, J-P={jp_score}\n"
+                entry += f"要約: {summary}\n"
+                entry += f"フィードバック: {feedback}\n\n"
+                
+                formatted_text += entry
+            
+            # 分析依頼を追加
+            formatted_text += "【分析依頼】\n"
+            formatted_text += "上記の日記データを分析し、ユーザーの性格的な特徴と成長のためのアドバイスを3つ提案してください。\n"
+            
+            logger.info(f"ユーザー {user_id} の日記履歴をフォーマットしました（{len(diaries)}件）")
+            return formatted_text
+                
+        except Exception as e:
+            logger.error(f"日記履歴のフォーマット中にエラーが発生しました: {str(e)}")
+            return "日記履歴の取得中にエラーが発生しました。"
+    
+    def _call_workflow_endpoint(self, content: str, user_id: str, request_type: str = "analysis", history: str = None) -> Dict[str, Any]:
         """Workflows APIエンドポイントを呼び出す"""
         endpoint = f"{self.base_url}/workflows/run"
         
@@ -120,9 +210,11 @@ class DifyAPIService:
         # 分析リクエストの場合はコンテンツを追加
         if request_type == "analysis":
             inputs["text"] = content
-        # のびしろリクエストの場合はuser_idを追加
+        # のびしろリクエストの場合はuser_idとhistoryを追加
         elif request_type == "growth":
             inputs["user_id"] = user_id
+            if history:
+                inputs["history"] = history
         
         payload = {
             "inputs": inputs,
@@ -131,7 +223,13 @@ class DifyAPIService:
         }
         
         logger.info(f"Dify API Workflows エンドポイントに接続: {endpoint}, タイプ: {request_type}")
+        if history:
+            logger.info(f"日記履歴データ付きでリクエスト（約{len(history)}文字）")
+        
+        start_time = datetime.now()
         response = requests.post(endpoint, json=payload, headers=self.headers, timeout=60)
+        end_time = datetime.now()
+        logger.info(f"Dify API呼び出し時間: {(end_time - start_time).total_seconds()}秒")
         
         if response.status_code == 200:
             logger.info("Dify API呼び出し成功")

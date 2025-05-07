@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Share,
   ActivityIndicator,
-  Image
+  Image,
+  Platform
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { apiClient } from '@/services/apiClient';
@@ -25,6 +26,20 @@ import Animated, {
   FadeIn,
   FadeOut
 } from 'react-native-reanimated';
+
+// カスタム戻るボタンコンポーネント
+const BackButton = ({ onPress, color = Theme.colors.primary }) => {
+  return (
+    <TouchableOpacity 
+      style={styles.backButton}
+      onPress={onPress}
+      accessibilityLabel="戻る"
+      accessibilityRole="button"
+    >
+      <ArrowLeft size={20} color={color} />
+    </TouchableOpacity>
+  );
+};
 
 // MBTIタイプの説明
 const MBTI_TYPE_DESCRIPTIONS = {
@@ -204,12 +219,7 @@ export default function AnalysisDetailScreen() {
     >
       <View style={styles.headerContainer}>
         <View style={styles.titleRow}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <ArrowLeft size={20} color={Theme.colors.primary} />
-          </TouchableOpacity>
+          <BackButton onPress={() => router.back()} />
           <Text style={styles.title}>
             {analysis ? formatDateForTitle(analysis.timestamp) : '分析詳細'}
           </Text>

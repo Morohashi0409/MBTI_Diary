@@ -202,22 +202,24 @@ export const saveUserId = async (userId: string): Promise<void> => {
  * Firebaseの認証情報を優先的に使用し、それがない場合はAsyncStorageから取得
  */
 export const getUserId = async (): Promise<string | null> => {
-  // まず、Firebase認証情報からユーザーIDを取得
-  const user = getCurrentUser();
-  if (user && user.uid) {
-    console.log('Firebase認証からユーザーIDを取得:', user.uid);
-    // 認証されているユーザーのIDをAsyncStorageに保存（同期のため）
-    await saveUserId(user.uid);
-    return user.uid;
-  }
-  
-  // Firebase認証からIDが取得できない場合、AsyncStorageから取得
   try {
+    // 非同期認証関数を使用してFirebaseからユーザー情報を取得
+    const { getCurrentUserAsync } = await import('./firebaseService');
+    const user = await getCurrentUserAsync();
+    
+    if (user && user.uid) {
+      console.log('Firebase認証(非同期)からユーザーIDを取得:', user.uid);
+      // 認証されているユーザーのIDをAsyncStorageに保存（同期のため）
+      await saveUserId(user.uid);
+      return user.uid;
+    }
+    
+    // Firebase認証からIDが取得できない場合、AsyncStorageから取得
     const storedUserId = await AsyncStorage.getItem(USER_ID_KEY);
     console.log('AsyncStorageからユーザーIDを取得:', storedUserId);
     return storedUserId;
   } catch (error) {
-    console.error('AsyncStorageからユーザーIDの取得に失敗:', error);
+    console.error('ユーザーID取得エラー:', error);
     return null;
   }
 };

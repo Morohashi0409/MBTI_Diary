@@ -202,19 +202,23 @@ class ApiClient {
   async getGrowthAdvice(): Promise<GrowthAdviceResponse> {
     try {
       const headers = await this.getAuthHeaders();
+      console.log('のびしろ情報を取得します（認証ベースのエンドポイントを使用）');
+      
+      // 認証トークンを使用する新しいエンドポイントを使用
       const response = await fetch(`${this.baseUrl}/diary/user/growth`, {
         headers
       });
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('のびしろ情報取得APIエラー:', response.status, errorData);
         throw new Error(errorData.detail || 'のびしろ情報の取得に失敗しました');
       }
       
       return response.json();
     } catch (error) {
       console.error('のびしろ情報取得エラー:', error);
-      throw new Error('のびしろ情報の取得に失敗しました。もう一度お試しください。');
+      throw error instanceof Error ? error : new Error('のびしろ情報の取得に失敗しました。もう一度お試しください。');
     }
   }
 }

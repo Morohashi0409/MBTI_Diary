@@ -124,6 +124,21 @@ const UserRegistrationForm: React.FC<UserRegistrationFormProps> = ({ onRegistrat
       const beforeUser = getCurrentUser();
       console.log('認証前のユーザー状態:', beforeUser ? beforeUser.email : '未ログイン');
       
+      // 既にログインしている場合はそのユーザーを使用
+      if (beforeUser) {
+        console.log('既にログイン済みです。認証プロセスをスキップします。', beforeUser.email);
+        setFirebaseUser(beforeUser);
+        
+        // ユーザー名を設定
+        if (beforeUser.displayName) {
+          setUsername(beforeUser.displayName);
+        } else if (beforeUser.email) {
+          const emailUsername = beforeUser.email.split('@')[0];
+          setUsername(emailUsername);
+        }
+        return;
+      }
+      
       const user = await signInWithGoogle();
       
       if (user) {

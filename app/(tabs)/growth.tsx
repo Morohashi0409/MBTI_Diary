@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, ScrollView, StatusBar } from 'react-native';
 import { Theme } from '@/constants/theme';
 import { Sparkles, Target, CircleArrowUp as ArrowUpCircle } from 'lucide-react-native';
 import { apiClient, GrowthAdvice } from '@/services/apiClient';
-import { getUserId } from '@/services/userStorage';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import ErrorMessage from '@/components/ErrorMessage';
 
@@ -27,20 +26,14 @@ export default function GrowthScreen() {
         setLoading(true);
         setError(null);
         
-        // ユーザーIDの取得 (非同期関数になったため、awaitを使用)
-        const userId = await getUserId();
-        console.log('取得したユーザーID:', userId);
+        // 認証を待機するための遅延
+        console.log('認証情報の読み込みを待機しています...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        if (!userId) {
-          console.log('ユーザーIDが取得できませんでした');
-          setError('ユーザー情報が見つかりません。プロフィールから登録してください。');
-          setLoading(false);
-          return;
-        }
-        
-        // のびしろ情報の取得
-        console.log('APIリクエスト開始:', `/diary/user/growth/${userId}`);
-        const response = await apiClient.getGrowthAdvice(userId);
+        // APIクライアントを使用してのびしろ情報を取得
+        // 注: 新しいAPIエンドポイントではユーザーIDはURLパスに含めず、認証トークンから取得する
+        console.log('APIリクエスト開始: /diary/user/growth');
+        const response = await apiClient.getGrowthAdvice();
         console.log('APIレスポンス:', response);
         setAdviceData(response.advice);
         

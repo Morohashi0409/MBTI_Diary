@@ -8,7 +8,7 @@ import { Theme } from '@/constants/theme';
 import { View } from 'react-native';
 import UserRegistrationModal from '@/components/UserRegistrationModal';
 import { isUserRegistered, getMBTIProfile } from '@/services/userStorage';
-import { onAuthStateChange, getCurrentUser } from '@/services/firebaseService';
+import { onAuthStateChange, getCurrentUser, getCurrentUserAsync } from '@/services/firebaseService';
 import { User } from 'firebase/auth';
 
 // Keep the splash screen visible until fonts are loaded
@@ -64,9 +64,10 @@ export default function RootLayout() {
   // アプリ起動時の初期認証状態チェック
   useEffect(() => {
     const checkInitialAuthState = async () => {
+      setIsCheckingUser(true);
       try {
-        // 現在のFirebaseユーザーを取得
-        const user = getCurrentUser();
+        // 現在のFirebaseユーザーを取得（非同期版を使用して確実に取得）
+        const user = await getCurrentUserAsync();
         
         if (user) {
           console.log('アプリ起動時: すでにログイン済みのユーザー検出', user.email);
@@ -76,20 +77,19 @@ export default function RootLayout() {
           const registered = await isUserRegistered();
           if (registered) {
             // すでにログイン済みかつプロファイル登録済み → 登録モーダル非表示
-            console.log('アプリ起動時: ユーザー登録済み、登録モーダルをスキップします');
             setShowRegistration(false);
+            console.log('ユーザー登録済み: 登録モーダルを非表示にします');
           } else {
             // ログイン済みだがプロファイル未登録 → 登録モーダル表示
-            console.log('アプリ起動時: Firebaseログイン済みだがプロファイル未登録');
             setShowRegistration(true);
+            console.log('ユーザーはログイン済みですが、プロファイル未登録: 登録モーダルを表示します');
           }
         } else {
-          // 未ログイン → 登録モーダル表示
-          console.log('アプリ起動時: ログインユーザーなし、登録モーダルを表示します');
+          console.log('アプリ起動時: ログインユーザーなし');
+          // 未ログイン状態 → 認証が必要なので登録モーダル表示
           setShowRegistration(true);
         }
       } catch (error) {
-        console.error('初期認証状態確認エラー:', error);
         setShowRegistration(true);
       } finally {
         setIsCheckingUser(false);
@@ -112,9 +112,20 @@ export default function RootLayout() {
       if (user) {
         checkUserRegistration();
       } else {
-        // 認証されていない場合は登録画面を表示
-        setShowRegistration(true);
-        setIsCheckingUser(false);
+        // 認証されていない場合のみ登録画面を表示
+        // リダイレクトによる認証中はユーザーがnullになることがあるので、
+        // リダイレクト認証の状態を確認するため少し遅延させる
+        setTimeout(() => {
+          // 再度認証状態を確認（リダイレクトからの復帰対策）
+          const currentFirebaseUser = getCurrentUser();
+          if (!currentFirebaseUser) {
+            console.log('認証状態再確認: ユーザーなし、登録画面を表示します');
+            setShowRegistration(true);
+            setIsCheckingUser(false);
+          } else {
+            console.log('認証状態再確認: ユーザーあり', currentFirebaseUser.email);
+          }
+        }, 500);
       }
     });
     
