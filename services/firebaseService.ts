@@ -15,13 +15,17 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { getIdToken } from 'firebase/auth';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // Firebase WebブラウザのリダイレクトURIを登録
 WebBrowser.maybeCompleteAuthSession();
 
+// 環境変数から設定を読み込む
+const envApiKey = Constants.expoConfig?.extra?.firebaseApiKey;
+
 // Firebaseコンソールから取得した最新の設定
 const firebaseConfig = {
-  apiKey: "AIzaSyC3sNaRH5ghgMeaT6666wOB5K7BfV6w6L4",
+  apiKey: envApiKey || "AIzaSyC3sNaRH5ghgMeaT6666wOB5K7BfV6w6L4",
   authDomain: "mbti-diary-458111.firebaseapp.com",
   projectId: "mbti-diary-458111",
   storageBucket: "mbti-diary-458111.firebasestorage.app",

@@ -29,6 +29,8 @@ const config = {
   },
   extra: {
     apiUrl: process.env.API_URL || "https://mbti-diary-backend-1028553810221.asia-northeast1.run.app/api/v1",
+    firebaseApiKey: process.env.FIREBASE_API_KEY,
+    difyApiKey: process.env.DIFY_API_KEY,
     type: "analysis",
     eas: {
       projectId: "your-eas-project-id"
