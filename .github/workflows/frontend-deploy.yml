@@ -1,0 +1,57 @@
+name: Deploy Frontend to App Engine
+
+on:
+  push:
+    branches:
+      - main  # メインブランチにプッシュされたときに実行
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'constants/**'
+      - 'hooks/**'
+      - 'services/**'
+      - 'types/**'
+      - 'assets/**'
+      - 'package.json'
+      - 'app.json'
+      - 'app.config.js'
+      - 'app.yaml'
+      - '!backend/**'  # バックエンドのファイルは除外
+
+jobs:
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build web app
+        run: npm run build:web
+        env:
+          EXPO_PUBLIC_API_URL: ${{ secrets.BACKEND_API_URL }}
+      
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+      
+      - name: Deploy to App Engine
+        run: |
+          gcloud app deploy --quiet
+      
+      - name: Show deployed app URL
+        run: |
+          echo "Frontend deployed to: $(gcloud app describe --format='value(defaultHostname)')"
