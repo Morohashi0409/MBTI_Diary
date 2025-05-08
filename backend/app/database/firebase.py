@@ -3,6 +3,8 @@ from firebase_admin import credentials, firestore
 import os
 import logging
 import sys
+import json
+import base64
 import google.api_core.exceptions
 from pathlib import Path
 
@@ -22,20 +24,45 @@ logger.addHandler(handler)
 def initialize_firebase():
     """Firebase Admin SDKの初期化"""
     try:
-        # Firebase認証情報パスの取得
-        cred_path = settings.FIREBASE_CREDENTIALS_PATH
-        logger.debug(f"Firebase認証情報ファイルパス: {cred_path}")
+        # 環境変数から直接JSONデータを取得できるか確認
+        firebase_creds_json = os.environ.get("FIREBASE_CREDENTIALS")
         
-        # 認証情報ファイルが存在するか確認
-        if not os.path.exists(cred_path):
-            logger.error(f"Firebase認証情報ファイルが見つかりません: {cred_path}")
-            raise FileNotFoundError(f"Firebase認証情報ファイルが見つかりません: {cred_path}")
-        
-        logger.debug("認証情報ファイルが存在することを確認しました")
-        
-        # 認証情報を読み込み
-        cred = credentials.Certificate(cred_path)
-        logger.debug(f"認証情報を読み込みました: プロジェクトID={cred.project_id}")
+        if firebase_creds_json:
+            # 環境変数からJSON文字列を取得した場合
+            logger.debug("環境変数FIREBASE_CREDENTIALSから認証情報を読み込みます")
+            
+            try:
+                # Base64デコードを試みる
+                try:
+                    decoded_json = base64.b64decode(firebase_creds_json).decode('utf-8')
+                    cred_dict = json.loads(decoded_json)
+                    logger.debug("Base64エンコードされた認証情報をデコードしました")
+                except:
+                    # Base64でなければそのままJSONとして解析
+                    cred_dict = json.loads(firebase_creds_json)
+                    logger.debug("JSONとして認証情報を解析しました")
+                
+                # 辞書から認証情報を作成
+                cred = credentials.Certificate(cred_dict)
+                logger.debug(f"環境変数から認証情報を作成しました: プロジェクトID={cred.project_id}")
+            except json.JSONDecodeError as e:
+                logger.error(f"環境変数のJSONデータの解析に失敗しました: {str(e)}")
+                raise
+        else:
+            # ファイルパスから認証情報を読み込む（従来の方法）
+            cred_path = settings.FIREBASE_CREDENTIALS_PATH
+            logger.debug(f"Firebase認証情報ファイルパス: {cred_path}")
+            
+            # 認証情報ファイルが存在するか確認
+            if not os.path.exists(cred_path):
+                logger.error(f"Firebase認証情報ファイルが見つかりません: {cred_path}")
+                raise FileNotFoundError(f"Firebase認証情報ファイルが見つかりません: {cred_path}")
+            
+            logger.debug("認証情報ファイルが存在することを確認しました")
+            
+            # 認証情報を読み込み
+            cred = credentials.Certificate(cred_path)
+            logger.debug(f"認証情報を読み込みました: プロジェクトID={cred.project_id}")
         
         # Firebase初期化をシンプルに行う
         # 注: 複数のオプションを指定するとエラーが発生する可能性があるため、シンプルにする
